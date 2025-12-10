@@ -120,15 +120,17 @@ MAIN() {
     // Creazione hop map
 
     double correction = old(CALL, 0, [&](double correction){
-        auto hop_map_all = spawn(CALL, [&](int nodeid){
+        /*auto hop_map_all = spawn(CALL, [&](int nodeid){
             using fcpp::coordination::abf_hops;
             bool is_source = (node.uid == nodeid);
             int d = abf_hops(CALL, is_source);
             auto r = broadcast(CALL, d, make_tuple(node.position(), correction));
             return make_tuple(make_tuple(d, get<0>(r), get<1>(r)), true);
-        }, my_anchor_keys);       
+        }, my_anchor_keys);   */ 
 
-        for (auto const& [id, t] : hop_map_all) {
+        auto hop_map_all = bis_ksource_broadcast(CALL, node.storage(is_anchor{}), make_tuple(node.position(), correction), 5, 1, 80);
+
+        /*for (auto const& [id, t] : hop_map_all) {
             int hop = get<0>(t);
             vec<2> pos = get<1>(t);
             double corr = get<2>(t);
@@ -140,6 +142,21 @@ MAIN() {
                 node.storage(anchor_distance_map{})[id] = distance(node.position(), pos);
             else
                 node.storage(anchor_distance_map{})[id] = corr * hop;
+        }*/
+
+        for (auto const& [id, t] : hop_map_all){
+            double dist = get<0>(t);
+            auto tuple = get<2>(t);
+            vec<2> pos = get<0>(tuple);
+            double corr = get<1>(tuple);
+            node.storage(hop_map{})[id] = dist;
+            node.storage(anchor_x_map{})[id] = pos[0];
+            node.storage(anchor_y_map{})[id] = pos[1];
+            node.storage(anchor_correction_map{})[id] = corr;
+            if (node.storage(is_anchor{}))
+                node.storage(anchor_distance_map{})[id] = dist;
+            else
+                node.storage(anchor_distance_map{})[id] = dist;
         }
 
         int hop = 0;
@@ -232,7 +249,7 @@ MAIN() {
 
 }
 //! @brief Export types used by the main function (update it when expanding the program).
-FUN_EXPORT main_t = export_list<double, int, monitor_t, broadcast_t<int, tuple<vec<2>, double>>/*, hop_from_node_t*/>;
+FUN_EXPORT main_t = export_list<double, int, monitor_t, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>>;
 
 } // namespace coordination
 
