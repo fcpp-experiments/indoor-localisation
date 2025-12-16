@@ -8,6 +8,8 @@
 // [INTRODUCTION]
 //! Importing the FCPP library.
 #include "lib/fcpp.hpp"
+#include "algorithms/dvHop.hpp"
+#include "algorithms/bis_ksource_broadcast.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -33,28 +35,14 @@ namespace tags {
     struct node_shape {};
     //! @brief is anchor or not
     struct is_anchor {};
-    //! @brief hop map
-    struct hop_map {};
-    //! @brief support string
-    struct spr {};
-    //! @brief anchor distance map
-    struct anchor_distance_map {};
-    //! @brief correction for anchor
-    struct correction_anchor {};
-    //! @brief flag booleano
-    struct flag_correction {};
-    //! @brief map correction
-    struct anchor_correction_map {};
-    //! @brief map x
-    struct anchor_x_map {};
-    //! @brief map y
-    struct anchor_y_map {};
-    //! @brief distance nodo-ancora
-    struct distance_nodo_ancora_map {};
     //! @brief x stimato
-    struct x_stimato {};
+    struct x_stimato_dv {};
     //! @brief y stimato
-    struct y_stimato {};
+    struct y_stimato_dv {};
+    //! @brief x stimato
+    struct x_stimato_bis {};
+    //! @brief y stimato
+    struct y_stimato_bis {};
     //! @brief support string
     struct sprr {};
     //! @brief error misurazione
@@ -63,19 +51,6 @@ namespace tags {
 
 //! @brief The maximum communication range between nodes.
 constexpr size_t communication_range = 100;
-
-// [AGGREGATE PROGRAM]
-
-/*
- * @brief example function for checking a property. 
- * Sample property: you (the current device) have not been at disrisk for a couple of rounds.
- */
-FUN bool recent_dis_monitor(ARGS, bool disrisk) { CODE
-    using namespace logic;
-    bool prev_disrisk = Y(CALL, disrisk);
-    return !disrisk & !prev_disrisk;
-}
-FUN_EXPORT monitor_t = export_list<past_ctl_t, slcs_t>;
 
 // @brief Main function.
 MAIN() {
@@ -117,139 +92,24 @@ MAIN() {
     if (node.storage(is_anchor{}))
         my_anchor_keys = { id };
 
-    // Creazione hop map
+    vec<2> pos = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys);
+    node.storage(x_stimato_dv{}) = pos[0];
+    node.storage(y_stimato_dv{}) = pos[1];
 
-    double correction = old(CALL, 0, [&](double correction){
-        /*auto hop_map_all = spawn(CALL, [&](int nodeid){
-            using fcpp::coordination::abf_hops;
-            bool is_source = (node.uid == nodeid);
-            int d = abf_hops(CALL, is_source);
-            auto r = broadcast(CALL, d, make_tuple(node.position(), correction));
-            return make_tuple(make_tuple(d, get<0>(r), get<1>(r)), true);
-        }, my_anchor_keys);   */ 
-
-        auto hop_map_all = bis_ksource_broadcast(CALL, node.storage(is_anchor{}), make_tuple(node.position(), correction), 5, 1, 80);
-
-        /*for (auto const& [id, t] : hop_map_all) {
-            int hop = get<0>(t);
-            vec<2> pos = get<1>(t);
-            double corr = get<2>(t);
-            node.storage(hop_map{})[id] = hop;
-            node.storage(anchor_x_map{})[id] = pos[0];
-            node.storage(anchor_y_map{})[id] = pos[1];
-            node.storage(anchor_correction_map{})[id] = corr;
-            if (node.storage(is_anchor{}))
-                node.storage(anchor_distance_map{})[id] = distance(node.position(), pos);
-            else
-                node.storage(anchor_distance_map{})[id] = corr * hop;
-        }*/
-
-        for (auto const& [id, t] : hop_map_all){
-            double dist = get<0>(t);
-            auto tuple = get<2>(t);
-            vec<2> pos = get<0>(tuple);
-            double corr = get<1>(tuple);
-            node.storage(hop_map{})[id] = dist;
-            node.storage(anchor_x_map{})[id] = pos[0];
-            node.storage(anchor_y_map{})[id] = pos[1];
-            node.storage(anchor_correction_map{})[id] = corr;
-            if (node.storage(is_anchor{}))
-                node.storage(anchor_distance_map{})[id] = dist;
-            else
-                node.storage(anchor_distance_map{})[id] = dist;
-        }
-
-        int hop = 0;
-        double distance = 0;
-        if (node.storage(is_anchor{})){
-            for (auto const& [key, value] : node.storage(anchor_distance_map{})){
-                distance += value;
-                hop += node.storage(hop_map{})[key];
-            }   
-            if (distance != 0 && hop != 0)
-                correction = distance/hop;
-        }
-
-        node.storage(correction_anchor{}) = correction;
-
-        return correction;
-    });
-
-    std::stringstream ss;
-    if (node.storage(anchor_correction_map{}).empty()) {
-        ss << "(vuota)";
-    } else {
-        for (auto const& [key, value] :  node.storage(anchor_correction_map{})) 
-            ss << "(id: " << key << " correction: " << value << " )";
-    }
-
-    //trilaterazione
-    if (!node.storage(is_anchor{})){
-        auto& dist_map = node.storage(anchor_distance_map{});
-        auto& x_map = node.storage(anchor_x_map{});
-        auto& y_map = node.storage(anchor_y_map{});
-
-        std::vector<int> anchor_ids;
-        for (auto const& [id, _] : dist_map)
-            anchor_ids.push_back(id);
-
-        int a1 = -1, a2 = -1, a3 = -1;
-
-        if (anchor_ids.size() >= 3) {
-            // Prendo la prima ancora come riferimento
-            int a_ref = anchor_ids[0];
-            double x1 = x_map[a_ref];
-            double y1 = y_map[a_ref];
-            double r1 = dist_map[a_ref];
-
-            // Inizializzo i coefficienti della matrice normale
-            double ATA11 = 0, ATA12 = 0, ATA22 = 0;
-            double ATb1 = 0, ATb2 = 0;
-
-            // Costruisci e accumula (AᵀA) e (Aᵀb)
-            for (size_t i = 1; i < anchor_ids.size(); ++i) {
-                int ai = anchor_ids[i];
-                double xi = x_map[ai];
-                double yi = y_map[ai];
-                double ri = dist_map[ai];
-
-                double Ai1 = 2 * (xi - x1);
-                double Ai2 = 2 * (yi - y1);
-                double bi  = r1*r1 - ri*ri + xi*xi - x1*x1 + yi*yi - y1*y1;
-
-                ATA11 += Ai1 * Ai1;
-                ATA12 += Ai1 * Ai2;
-                ATA22 += Ai2 * Ai2;
-                ATb1  += Ai1 * bi;
-                ATb2  += Ai2 * bi;
-            }
-
-            // Determinante del sistema normale
-            double det = ATA11 * ATA22 - ATA12 * ATA12;
-
-            if (fabs(det) > 1e-12) {
-                double x_est = (ATb1 * ATA22 - ATA12 * ATb2) / det;
-                double y_est = (ATA11 * ATb2 - ATA12 * ATb1) / det;
-
-                node.storage(x_stimato{}) = x_est;
-                node.storage(y_stimato{}) = y_est;
-            }
-
-            node.storage(error{}) = distance(node.position(), make_vec(node.storage(x_stimato{}), node.storage(y_stimato{})));
-        }
-    }
+    vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}));
+    node.storage(x_stimato_bis{}) = pos2[0];
+    node.storage(y_stimato_bis{}) = pos2[1];
 
 
     // usage of node storage
     node.storage(node_size{})  = 10;
     node.storage(node_shape{}) = shape::sphere;
-    //node.storage(spr{}) = supp.str();
-    node.storage(sprr{}) = ss.str();
+    //node.storage(sprr{}) = ss.str();
     
 
 }
 //! @brief Export types used by the main function (update it when expanding the program).
-FUN_EXPORT main_t = export_list<double, int, monitor_t, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>>;
+FUN_EXPORT main_t = export_list<double, int, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t>;
 
 } // namespace coordination
 
@@ -285,17 +145,10 @@ using store_t = tuple_store<
     node_size,              double,
     node_shape,             shape,
     is_anchor,              bool,
-    hop_map,                std::unordered_map<int,int, fcpp::common::hash<int>>,
-    spr,                    std::string,
-    anchor_distance_map,    std::unordered_map<int,double, fcpp::common::hash<int>>,
-    correction_anchor,      int,
-    flag_correction,        bool,
-    anchor_correction_map,  std::unordered_map<int,int, fcpp::common::hash<int>>,
-    anchor_x_map,           std::unordered_map<int,int, fcpp::common::hash<int>>,
-    anchor_y_map,           std::unordered_map<int,int, fcpp::common::hash<int>>,
-    distance_nodo_ancora_map, std::unordered_map<int,int, fcpp::common::hash<int>>,
-    x_stimato,              double,
-    y_stimato,              double,
+    x_stimato_dv,           double,
+    y_stimato_dv,           double,
+    x_stimato_bis,          double,
+    y_stimato_bis,          double,
     sprr,                   std::string,
     error,                  int
 >;
