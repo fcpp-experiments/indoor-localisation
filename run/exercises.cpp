@@ -10,6 +10,7 @@
 #include "lib/fcpp.hpp"
 #include "algorithms/dvHop.hpp"
 #include "algorithms/bis_ksource_broadcast.hpp"
+#include "algorithms/non_bayesian_cooperative_loocalization.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -43,6 +44,10 @@ namespace tags {
     struct x_stimato_bis {};
     //! @brief y stimato
     struct y_stimato_bis {};
+    //! @brief x stimato
+    struct x_stimato_coop {};
+    //! @brief y stimato
+    struct y_stimato_coop {};
     //! @brief support string
     struct sprr {};
     //! @brief error misurazione
@@ -56,6 +61,10 @@ constexpr size_t communication_range = 100;
 MAIN() {
     // import tag names in the local scope.
     using namespace tags;
+
+    std::random_device rd;  
+    std::mt19937 gen(rd()); 
+    std::uniform_int_distribution<> dis(0, 500); 
 
     int id = node.uid;
     double side = 500.0;
@@ -84,6 +93,10 @@ MAIN() {
     } else {
         node.storage(is_anchor{}) = false;
         node.storage(node_color{}) = color(GREEN);
+         if (node.storage(x_stimato_coop{}) == 0 && node.storage(y_stimato_coop{}) == 0){
+            node.storage(x_stimato_coop{}) = dis(gen);
+            node.storage(y_stimato_coop{}) = dis(gen);
+        }  
     }
 
 
@@ -100,6 +113,9 @@ MAIN() {
     node.storage(x_stimato_bis{}) = pos2[0];
     node.storage(y_stimato_bis{}) = pos2[1];
 
+    vec<2> pos3 = nBayesianCoop(CALL, node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{}), node.storage(is_anchor{}));
+    node.storage(x_stimato_coop{}) = pos3[0];
+    node.storage(y_stimato_coop{}) = pos3[1];
 
     // usage of node storage
     node.storage(node_size{})  = 10;
@@ -109,7 +125,7 @@ MAIN() {
 
 }
 //! @brief Export types used by the main function (update it when expanding the program).
-FUN_EXPORT main_t = export_list<double, int, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t>;
+FUN_EXPORT main_t = export_list<double, int, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t, nBayesianCoop_t>;
 
 } // namespace coordination
 
@@ -149,6 +165,8 @@ using store_t = tuple_store<
     y_stimato_dv,           double,
     x_stimato_bis,          double,
     y_stimato_bis,          double,
+    x_stimato_coop,         double,
+    y_stimato_coop,         double,
     sprr,                   std::string,
     error,                  int
 >;
