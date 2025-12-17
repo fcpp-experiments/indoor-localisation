@@ -51,7 +51,11 @@ namespace tags {
     //! @brief support string
     struct sprr {};
     //! @brief error misurazione
-    struct error {};
+    struct error_bis {};
+    //! @brief error misurazione
+    struct error_dv {};
+    //! @brief error misurazione
+    struct error_coop {};
 }
 
 //! @brief The maximum communication range between nodes.
@@ -117,6 +121,10 @@ MAIN() {
     node.storage(x_stimato_coop{}) = pos3[0];
     node.storage(y_stimato_coop{}) = pos3[1];
 
+    node.storage(error_bis{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis{}), node.storage(y_stimato_bis{})));
+    node.storage(error_dv{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv{}), node.storage(y_stimato_dv{})));
+    node.storage(error_coop{}) = distance(node.position(), make_vec(node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{})));
+
     // usage of node storage
     node.storage(node_size{})  = 10;
     node.storage(node_shape{}) = shape::sphere;
@@ -168,11 +176,15 @@ using store_t = tuple_store<
     x_stimato_coop,         double,
     y_stimato_coop,         double,
     sprr,                   std::string,
-    error,                  int
+    error_bis,              double,
+    error_dv,               double,
+    error_coop,             double
 >;
 //! @brief The tags and corresponding aggregators to be logged (change as needed).
 using aggregator_t = aggregators<
-    error, aggregator::mean<double>
+    error_bis,      aggregator::mean<double>,
+    error_coop,     aggregator::mean<double>,
+    error_dv,       aggregator::mean<double>
 >;
 
 //! @brief The general simulation options.
