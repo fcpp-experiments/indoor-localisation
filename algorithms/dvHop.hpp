@@ -5,12 +5,17 @@
 
 namespace fcpp{
 namespace coordination{
+    
+    using dvhop_state_t = tuple<
+            double, // correction
+            std::unordered_map<int, int,    fcpp::common::hash<int>>, // hop_map
+            std::unordered_map<int, double,    fcpp::common::hash<int>>, // correction map
+            std::unordered_map<int, double, fcpp::common::hash<int>>, // dist_map
+            std::unordered_map<int, int,    fcpp::common::hash<int>>, // x_map
+            std::unordered_map<int, int,    fcpp::common::hash<int>>  // y_map
+        >;
+
     FUN vec<2> dvHop(ARGS, int nodeid, bool is_anchor, std::vector<int> my_anchor_keys){ CODE
-        std::unordered_map<int, int, fcpp::common::hash<int>> hop_map;
-        std::unordered_map<int,int, fcpp::common::hash<int>> anchor_x_map;
-        std::unordered_map<int,int, fcpp::common::hash<int>> anchor_y_map;
-        std::unordered_map<int,int, fcpp::common::hash<int>> anchor_correction_map;
-        std::unordered_map<int,double, fcpp::common::hash<int>> anchor_distance_map;
 
         double x_est;
         double y_est;
@@ -19,7 +24,16 @@ namespace coordination{
         vec<2> position = make_vec(0.0 , 0.0);
 
 
-        double correction = old(CALL, 0, [&](double correction){
+        auto state = old(CALL, dvhop_state_t{0.0, {}, {}, {}, {}, {}}, [&](dvhop_state_t prev){
+            auto next = prev;
+
+            auto& correction = get<0>(next);
+            auto& hop_map = get<1>(next);
+            auto& anchor_correction_map = get<2>(next);
+            auto& anchor_distance_map = get<3>(next);
+            auto& anchor_x_map = get<4>(next);
+            auto& anchor_y_map = get<5>(next);
+
             auto hop_map_all = spawn(CALL, [&](int nodeid){
                 using fcpp::coordination::abf_hops;
                 bool is_source = (node.uid == nodeid);
@@ -53,13 +67,13 @@ namespace coordination{
                     correction = distance/hop;
             }
 
-            return correction;
+            return next;
         });
 
         if (!is_anchor){
-            auto& dist_map = anchor_distance_map;
-            auto& x_map = anchor_x_map;
-            auto& y_map = anchor_y_map;
+            auto& dist_map = get<3>(state);
+            auto& x_map = get<4>(state);
+            auto& y_map = get<5>(state);
 
             std::vector<int> anchor_ids;
             for (auto const& [id, _] : dist_map)
@@ -109,7 +123,7 @@ namespace coordination{
         }
         return make_vec(0,0);
     }
-    FUN_EXPORT dvHop_t = export_list<broadcast_t<int, tuple<vec<2>, double>>, abf_hops_t>;
+    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<int, tuple<vec<2>, double>>, abf_hops_t>;
 
     /*FUN vec<2> trilaterazione(ARGS, bool is_anchor, std::unordered_map<int,double, fcpp::common::hash<int>> anchor_distance_map, std::unordered_map<int,int, fcpp::common::hash<int>> anchor_x_map, std::unordered_map<int,int, fcpp::common::hash<int>> anchor_y_map){ CODE
         double x_est;
