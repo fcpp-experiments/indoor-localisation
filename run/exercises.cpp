@@ -48,8 +48,6 @@ namespace tags {
     struct x_stimato_coop {};
     //! @brief y stimato
     struct y_stimato_coop {};
-    //! @brief support string
-    struct sprr {};
     //! @brief error misurazione
     struct error_bis {};
     //! @brief error misurazione
@@ -97,13 +95,11 @@ MAIN() {
     } else {
         node.storage(is_anchor{}) = false;
         node.storage(node_color{}) = color(GREEN);
-         if (node.storage(x_stimato_coop{}) == 0 && node.storage(y_stimato_coop{}) == 0){
+         if (node.current_time() == 0){
             node.storage(x_stimato_coop{}) = dis(gen);
             node.storage(y_stimato_coop{}) = dis(gen);
         }  
     }
-
-
 
     std::vector<int> my_anchor_keys;
     if (node.storage(is_anchor{}))
@@ -127,9 +123,7 @@ MAIN() {
 
     // usage of node storage
     node.storage(node_size{})  = 10;
-    node.storage(node_shape{}) = shape::sphere;
-    //node.storage(sprr{}) = ss.str();
-    
+    node.storage(node_shape{}) = shape::sphere;   
 
 }
 //! @brief Export types used by the main function (update it when expanding the program).
@@ -175,7 +169,6 @@ using store_t = tuple_store<
     y_stimato_bis,          double,
     x_stimato_coop,         double,
     y_stimato_coop,         double,
-    sprr,                   std::string,
     error_bis,              double,
     error_dv,               double,
     error_coop,             double
