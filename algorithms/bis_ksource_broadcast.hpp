@@ -6,8 +6,8 @@
 
 namespace fcpp{
 namespace coordination{
-    FUN vec<2> bis_ksource(ARGS, bool is_anchor){CODE
-        std::unordered_map<int, int, fcpp::common::hash<int>> hop_map;
+    FUN vec<2> bis_ksource(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){CODE
+        std::unordered_map<int, real_t, fcpp::common::hash<int>> hop_map;
         std::unordered_map<int,int, fcpp::common::hash<int>> anchor_x_map;
         std::unordered_map<int,int, fcpp::common::hash<int>> anchor_y_map;
         std::unordered_map<int,int, fcpp::common::hash<int>> anchor_correction_map;
@@ -16,8 +16,10 @@ namespace coordination{
         double x_est;
         double y_est;
 
-        double correction = old(CALL, 0, [&](double correction){
-            auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), 5, 1, 80);
+        double correction = old(CALL, 1, [&](double correction){
+            auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), 5, 1, info_speed, [&](){
+                return nbr_dist;
+            });
 
             for (auto const& [id, t] : hop_map_all){
                 double dist = get<0>(t);
@@ -29,12 +31,12 @@ namespace coordination{
                 anchor_y_map[id] = pos[1];
                 anchor_correction_map[id] = corr;
                 if (is_anchor)
-                    anchor_distance_map[id] = dist;
+                    anchor_distance_map[id] = distance(node.position(), pos);
                 else
-                    anchor_distance_map[id] = dist;
+                    anchor_distance_map[id] = dist * corr;
             }
 
-            int hop = 0;
+            real_t hop = 0;
             double distance = 0;
             if (is_anchor){
                 for (auto const& [key, value] : anchor_distance_map){

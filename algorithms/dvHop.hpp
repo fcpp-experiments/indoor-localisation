@@ -9,14 +9,14 @@ namespace coordination{
     
     using dvhop_state_t = tuple<
             double, // correction
-            std::unordered_map<int, int,    fcpp::common::hash<int>>, // hop_map
+            std::unordered_map<int, real_t,    fcpp::common::hash<int>>, // hop_map
             std::unordered_map<int, double,    fcpp::common::hash<int>>, // correction map
             std::unordered_map<int, double, fcpp::common::hash<int>>, // dist_map
             std::unordered_map<int, int,    fcpp::common::hash<int>>, // x_map
             std::unordered_map<int, int,    fcpp::common::hash<int>>  // y_map
         >;
 
-    FUN vec<2> dvHop(ARGS, int nodeid, bool is_anchor, std::vector<int> my_anchor_keys){ CODE
+    FUN vec<2> dvHop(ARGS, int nodeid, bool is_anchor, std::vector<int> my_anchor_keys, field<real_t> nbr_dist, real_t info_speed){ CODE
 
         double x_est;
         double y_est;
@@ -38,13 +38,16 @@ namespace coordination{
             auto hop_map_all = spawn(CALL, [&](int nodeid){
                 using fcpp::coordination::abf_hops;
                 bool is_source = (node.uid == nodeid);
-                int d = abf_hops(CALL, is_source);
+                //int d = abf_hops(CALL, is_source);
+                real_t d = bis_distance(CALL, is_anchor, 1, info_speed, [&](){
+                    return nbr_dist;
+                });
                 auto r = broadcast(CALL, d, make_tuple(node.position(), correction));
                 return make_tuple(make_tuple(d, get<0>(r), get<1>(r)), true);
             }, my_anchor_keys); 
 
             for (auto const& [id, t] : hop_map_all) {
-                int hop = get<0>(t);
+                real_t hop = get<0>(t);
                 vec<2> pos = get<1>(t);
                 double corr = get<2>(t);
                 hop_map[id] = hop;
@@ -57,7 +60,7 @@ namespace coordination{
                     anchor_distance_map[id] = corr * hop;
             }
 
-            int hop = 0;
+            real_t hop = 0;
             double distance = 0;
             if (is_anchor){
                 for (auto const& [key, value] : anchor_distance_map){
@@ -75,7 +78,7 @@ namespace coordination{
         return pos;
 
     }
-    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<int, tuple<vec<2>, double>>, abf_hops_t, trilaterazione_t>;
+    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<real_t, tuple<vec<2>, double>>, bis_distance_t, trilaterazione_t>;
 
 }
 }

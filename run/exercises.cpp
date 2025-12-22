@@ -49,11 +49,15 @@ namespace tags {
     //! @brief y stimato
     struct y_stimato_coop {};
     //! @brief error misurazione
-    struct error_bis {};
+    struct dist_ksource {};
     //! @brief error misurazione
     struct error_dv {};
     //! @brief error misurazione
     struct error_coop {};
+    
+    template <typename T>
+    struct error {};
+    
 }
 
 //! @brief The maximum communication range between nodes.
@@ -77,16 +81,31 @@ MAIN() {
     int cols = 5;
 
     int total_anchors = rows * cols;
+    int anchors_per_side = static_cast<int>(side / step);
 
     double step_x = side / (cols - 1);
     double step_y = side / (rows - 1);
 
     if (id < total_anchors) {
-        int row = id / cols;
-        int col = id % cols;
+        double x = 0, y = 0;
+        int pos = id;
 
-        double x = col * step_x;
-        double y = row * step_y;
+        if (pos <= anchors_per_side) {
+            x = pos * step;
+            y = side;
+        }
+        else if (pos <= anchors_per_side * 2) {
+            x = side;
+            y = side - (pos - anchors_per_side) * step;
+        }
+        else if (pos <= anchors_per_side * 3) {
+            x = side - (pos - anchors_per_side * 2) * step;
+            y = 0;
+        }
+        else {
+            x = 0;
+            y = (pos - anchors_per_side * 3) * step;
+        }
 
         node.position() = make_vec(x, y);
         node.storage(is_anchor{}) = true;
@@ -105,11 +124,12 @@ MAIN() {
     if (node.storage(is_anchor{}))
         my_anchor_keys = { id };
 
-    vec<2> pos = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys);
+    vec<2> pos = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 80);
     node.storage(x_stimato_dv{}) = pos[0];
     node.storage(y_stimato_dv{}) = pos[1];
 
-    vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}));
+    //vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0); //Versione hop
+    vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
     node.storage(x_stimato_bis{}) = pos2[0];
     node.storage(y_stimato_bis{}) = pos2[1];
 
@@ -117,7 +137,7 @@ MAIN() {
     node.storage(x_stimato_coop{}) = pos3[0];
     node.storage(y_stimato_coop{}) = pos3[1];
 
-    node.storage(error_bis{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis{}), node.storage(y_stimato_bis{})));
+    node.storage(error<dist_ksource>{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis{}), node.storage(y_stimato_bis{})));
     node.storage(error_dv{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv{}), node.storage(y_stimato_dv{})));
     node.storage(error_coop{}) = distance(node.position(), make_vec(node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{})));
 
@@ -169,13 +189,13 @@ using store_t = tuple_store<
     y_stimato_bis,          double,
     x_stimato_coop,         double,
     y_stimato_coop,         double,
-    error_bis,              double,
+    error<dist_ksource>,              double,
     error_dv,               double,
     error_coop,             double
 >;
 //! @brief The tags and corresponding aggregators to be logged (change as needed).
 using aggregator_t = aggregators<
-    error_bis,      aggregator::mean<double>,
+    error<dist_ksource>,      aggregator::mean<double>,
     error_coop,     aggregator::mean<double>,
     error_dv,       aggregator::mean<double>
 >;
