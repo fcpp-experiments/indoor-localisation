@@ -21,10 +21,6 @@ namespace coordination{
         double x_est;
         double y_est;
 
-        
-        vec<2> position = make_vec(0.0 , 0.0);
-
-
         auto state = old(CALL, dvhop_state_t{0.0, {}, {}, {}, {}, {}}, [&](dvhop_state_t prev){
             auto next = prev;
 

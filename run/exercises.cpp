@@ -11,6 +11,7 @@
 #include "algorithms/dvHop.hpp"
 #include "algorithms/bis_ksource_broadcast.hpp"
 #include "algorithms/non_bayesian_cooperative_loocalization.hpp"
+#include "anchor/anchorLayout.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -51,9 +52,9 @@ namespace tags {
     //! @brief error misurazione
     struct dist_ksource {};
     //! @brief error misurazione
-    struct error_dv {};
+    struct dist_dv {};
     //! @brief error misurazione
-    struct error_coop {};
+    struct dist_coop {};
     
     template <typename T>
     struct error {};
@@ -71,43 +72,27 @@ MAIN() {
     std::random_device rd;  
     std::mt19937 gen(rd()); 
     std::uniform_int_distribution<> dis(0, 500); 
+    
+    // Griglia or Perimetro
+    AnchorLayout anchor_layout = PERIMETRO;
 
     int id = node.uid;
     double side = 500.0;
     double step = 100.0;
-
-
     int rows = 4;
     int cols = 5;
-
     int total_anchors = rows * cols;
-    int anchors_per_side = static_cast<int>(side / step);
-
-    double step_x = side / (cols - 1);
-    double step_y = side / (rows - 1);
 
     if (id < total_anchors) {
-        double x = 0, y = 0;
-        int pos = id;
-
-        if (pos <= anchors_per_side) {
-            x = pos * step;
-            y = side;
-        }
-        else if (pos <= anchors_per_side * 2) {
-            x = side;
-            y = side - (pos - anchors_per_side) * step;
-        }
-        else if (pos <= anchors_per_side * 3) {
-            x = side - (pos - anchors_per_side * 2) * step;
-            y = 0;
-        }
-        else {
-            x = 0;
-            y = (pos - anchors_per_side * 3) * step;
-        }
-
-        node.position() = make_vec(x, y);
+        node.position() = positionAnchor(
+            CALL,
+            id,
+            anchor_layout,
+            side, 
+            step, 
+            rows,
+            cols
+        );
         node.storage(is_anchor{}) = true;
         node.storage(node_color{}) = color(RED);
 
@@ -138,8 +123,8 @@ MAIN() {
     node.storage(y_stimato_coop{}) = pos3[1];
 
     node.storage(error<dist_ksource>{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis{}), node.storage(y_stimato_bis{})));
-    node.storage(error_dv{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv{}), node.storage(y_stimato_dv{})));
-    node.storage(error_coop{}) = distance(node.position(), make_vec(node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{})));
+    node.storage(error<dist_dv>{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv{}), node.storage(y_stimato_dv{})));
+    node.storage(error<dist_coop>{}) = distance(node.position(), make_vec(node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{})));
 
     // usage of node storage
     node.storage(node_size{})  = 10;
@@ -147,7 +132,7 @@ MAIN() {
 
 }
 //! @brief Export types used by the main function (update it when expanding the program).
-FUN_EXPORT main_t = export_list<double, int, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t, nBayesianCoop_t>;
+FUN_EXPORT main_t = export_list<double, int, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t, nBayesianCoop_t, positionAnchor_t>;
 
 } // namespace coordination
 
@@ -189,15 +174,15 @@ using store_t = tuple_store<
     y_stimato_bis,          double,
     x_stimato_coop,         double,
     y_stimato_coop,         double,
-    error<dist_ksource>,              double,
-    error_dv,               double,
-    error_coop,             double
+    error<dist_ksource>,    double,
+    error<dist_dv>,         double,
+    error<dist_coop>,       double
 >;
 //! @brief The tags and corresponding aggregators to be logged (change as needed).
 using aggregator_t = aggregators<
-    error<dist_ksource>,      aggregator::mean<double>,
-    error_coop,     aggregator::mean<double>,
-    error_dv,       aggregator::mean<double>
+    error<dist_ksource>,        aggregator::mean<double>,
+    error<dist_coop>,           aggregator::mean<double>,
+    error<dist_dv>,             aggregator::mean<double>
 >;
 
 //! @brief The general simulation options.
