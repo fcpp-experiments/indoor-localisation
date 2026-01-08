@@ -54,7 +54,7 @@ namespace coordination{
         return pos;
 
     }
-    FUN_EXPORT bis_ksource_t = export_list<bis_ksource_broadcast_t<tuple<vec<2>, double>>, trilaterazione_t>;
+    FUN_EXPORT bis_ksource_t = export_list<bis_ksource_broadcast_t<tuple<vec<2>, double>>, trilaterazione_t, double, int, broadcast_t<int, tuple<vec<2>, double>>>;
 }
 }
 

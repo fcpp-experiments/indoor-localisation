@@ -74,7 +74,7 @@ namespace coordination{
         return pos;
 
     }
-    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<real_t, tuple<vec<2>, double>>, bis_distance_t, trilaterazione_t>;
+    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<real_t, tuple<vec<2>, double>>, bis_distance_t, trilaterazione_t, double, int, broadcast_t<int, tuple<vec<2>, double>>>;
 
 }
 }

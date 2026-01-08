@@ -42,6 +42,10 @@ namespace tags {
     //! @brief y stimato
     struct y_stimato_dv {};
     //! @brief x stimato
+    struct x_stimato_dv_real {};
+    //! @brief y stimato
+    struct y_stimato_dv_real {};
+    //! @brief x stimato
     struct x_stimato_bis {};
     //! @brief y stimato
     struct y_stimato_bis {};
@@ -49,10 +53,19 @@ namespace tags {
     struct x_stimato_coop {};
     //! @brief y stimato
     struct y_stimato_coop {};
+    //! @brief x stimato
+    struct x_stimato_bis_hop {};
+    //! @brief y stimato
+    struct y_stimato_bis_hop {};
+
     //! @brief error misurazione
-    struct dist_ksource {};
+    struct dist_ksource_real {};
     //! @brief error misurazione
-    struct dist_dv {};
+    struct dist_ksource_hop {};
+    //! @brief error misurazione
+    struct dist_dv_hop {};
+    //! @brief error misurazione
+    struct dist_dv_real {};
     //! @brief error misurazione
     struct dist_coop {};
     
@@ -73,7 +86,7 @@ MAIN() {
     std::mt19937 gen(rd()); 
     std::uniform_int_distribution<> dis(0, 500); 
     
-    // Griglia or Perimetro
+    // GRIGLIA or PERIMETRO
     AnchorLayout anchor_layout = PERIMETRO;
 
     int id = node.uid;
@@ -113,18 +126,27 @@ MAIN() {
     node.storage(x_stimato_dv{}) = pos[0];
     node.storage(y_stimato_dv{}) = pos[1];
 
-    //vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0); //Versione hop
-    vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
-    node.storage(x_stimato_bis{}) = pos2[0];
-    node.storage(y_stimato_bis{}) = pos2[1];
+    vec<2> pos5 = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
+    node.storage(x_stimato_dv_real{}) = pos5[0];
+    node.storage(y_stimato_dv_real{}) = pos5[1];
 
-    vec<2> pos3 = nBayesianCoop(CALL, node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{}), node.storage(is_anchor{}));
-    node.storage(x_stimato_coop{}) = pos3[0];
-    node.storage(y_stimato_coop{}) = pos3[1];
+    vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0); //Versione hop
+    node.storage(x_stimato_bis_hop{}) = pos2[0];
+    node.storage(y_stimato_bis_hop{}) = pos2[1];
 
-    node.storage(error<dist_ksource>{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis{}), node.storage(y_stimato_bis{})));
-    node.storage(error<dist_dv>{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv{}), node.storage(y_stimato_dv{})));
+    vec<2> pos3 = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
+    node.storage(x_stimato_bis{}) = pos3[0];
+    node.storage(y_stimato_bis{}) = pos3[1];
+
+    vec<2> pos4 = nBayesianCoop(CALL, node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{}), node.storage(is_anchor{}));
+    node.storage(x_stimato_coop{}) = pos4[0];
+    node.storage(y_stimato_coop{}) = pos4[1];
+
+    node.storage(error<dist_ksource_real>{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis{}), node.storage(y_stimato_bis{})));
+    node.storage(error<dist_dv_hop>{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv{}), node.storage(y_stimato_dv{})));
     node.storage(error<dist_coop>{}) = distance(node.position(), make_vec(node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{})));
+    node.storage(error<dist_dv_real>{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv_real{}), node.storage(y_stimato_dv_real{})));
+    node.storage(error<dist_ksource_hop>{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis_hop{}), node.storage(y_stimato_bis_hop{})));
 
     // usage of node storage
     node.storage(node_size{})  = 10;
@@ -132,7 +154,7 @@ MAIN() {
 
 }
 //! @brief Export types used by the main function (update it when expanding the program).
-FUN_EXPORT main_t = export_list<double, int, broadcast_t<int, tuple<vec<2>, double>>, bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t, nBayesianCoop_t, positionAnchor_t>;
+FUN_EXPORT main_t = export_list<bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t, nBayesianCoop_t, positionAnchor_t>;
 
 } // namespace coordination
 
@@ -164,25 +186,34 @@ using spawn_s = sequence::multiple_n<node_num, 0>;
 using rectangle_d = distribution::rect_n<1, 0, 0, 500, 500>;
 //! @brief The contents of the node storage as tags and associated types.
 using store_t = tuple_store<
-    node_color,             color,
-    node_size,              double,
-    node_shape,             shape,
-    is_anchor,              bool,
-    x_stimato_dv,           double,
-    y_stimato_dv,           double,
-    x_stimato_bis,          double,
-    y_stimato_bis,          double,
-    x_stimato_coop,         double,
-    y_stimato_coop,         double,
-    error<dist_ksource>,    double,
-    error<dist_dv>,         double,
-    error<dist_coop>,       double
+    node_color,                 color,
+    node_size,                  double,
+    node_shape,                 shape,
+    is_anchor,                  bool,
+    x_stimato_dv,               double,
+    y_stimato_dv,               double,
+    x_stimato_bis_hop,          double,
+    y_stimato_bis_hop,          double,
+    x_stimato_coop,             double,
+    y_stimato_coop,             double,
+    x_stimato_bis,              double,
+    y_stimato_bis,              double,
+    x_stimato_dv_real,          double,
+    y_stimato_dv_real,          double,
+    error<dist_ksource_real>,   double,
+    error<dist_dv_hop>,         double,
+    error<dist_coop>,           double,
+    error<dist_ksource_hop>,    double,
+    error<dist_dv_real>,        double
+    
 >;
 //! @brief The tags and corresponding aggregators to be logged (change as needed).
 using aggregator_t = aggregators<
-    error<dist_ksource>,        aggregator::mean<double>,
+    error<dist_ksource_real>,   aggregator::mean<double>,
     error<dist_coop>,           aggregator::mean<double>,
-    error<dist_dv>,             aggregator::mean<double>
+    error<dist_dv_hop>,         aggregator::mean<double>,
+    error<dist_ksource_hop>,    aggregator::mean<double>,
+    error<dist_dv_real>,        aggregator::mean<double>
 >;
 
 //! @brief The general simulation options.
