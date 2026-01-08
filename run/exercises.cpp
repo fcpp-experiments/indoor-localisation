@@ -37,35 +37,26 @@ namespace tags {
     struct node_shape {};
     //! @brief is anchor or not
     struct is_anchor {};
-    //! @brief x stimato
-    struct x_stimato_dv {};
-    //! @brief y stimato
-    struct y_stimato_dv {};
-    //! @brief x stimato
-    struct x_stimato_dv_real {};
-    //! @brief y stimato
-    struct y_stimato_dv_real {};
-    //! @brief x stimato
-    struct x_stimato_bis {};
-    //! @brief y stimato
-    struct y_stimato_bis {};
-    //! @brief x stimato
-    struct x_stimato_coop {};
-    //! @brief y stimato
-    struct y_stimato_coop {};
-    //! @brief x stimato
-    struct x_stimato_bis_hop {};
-    //! @brief y stimato
-    struct y_stimato_bis_hop {};
 
+    //! @brief pos stimata
+    struct pos_dv_real {};
+    //! @brief pos stimata
+    struct pos_dv_hop {};
+    //! @brief pos stimata
+    struct pos_ksource_real {};
+    //! @brief pos stimata
+    struct pos_ksource_hop {};
+    //! @brief pos stimata
+    struct pos_coop {};
+
+    //! @brief error misurazione
+    struct dist_dv_real {};
+    //! @brief error misurazione
+    struct dist_dv_hop {};
     //! @brief error misurazione
     struct dist_ksource_real {};
     //! @brief error misurazione
     struct dist_ksource_hop {};
-    //! @brief error misurazione
-    struct dist_dv_hop {};
-    //! @brief error misurazione
-    struct dist_dv_real {};
     //! @brief error misurazione
     struct dist_coop {};
     
@@ -113,8 +104,8 @@ MAIN() {
         node.storage(is_anchor{}) = false;
         node.storage(node_color{}) = color(GREEN);
          if (node.current_time() == 0){
-            node.storage(x_stimato_coop{}) = dis(gen);
-            node.storage(y_stimato_coop{}) = dis(gen);
+            node.storage(pos_coop{})[0] = dis(gen);
+            node.storage(pos_coop{})[1] = dis(gen);
         }  
     }
 
@@ -122,39 +113,25 @@ MAIN() {
     if (node.storage(is_anchor{}))
         my_anchor_keys = { id };
 
-    vec<2> pos = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 80);
-    node.storage(x_stimato_dv{}) = pos[0];
-    node.storage(y_stimato_dv{}) = pos[1];
+    node.storage(pos_dv_hop{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 0);
+    node.storage(pos_dv_real{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
+    node.storage(pos_ksource_hop{}) = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0); 
+    node.storage(pos_ksource_real{}) = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
+    node.storage(pos_coop{}) = nBayesianCoop(CALL, node.storage(pos_coop{})[0], node.storage(pos_coop{})[1], node.storage(is_anchor{}));
 
-    vec<2> pos5 = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
-    node.storage(x_stimato_dv_real{}) = pos5[0];
-    node.storage(y_stimato_dv_real{}) = pos5[1];
-
-    vec<2> pos2 = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0); //Versione hop
-    node.storage(x_stimato_bis_hop{}) = pos2[0];
-    node.storage(y_stimato_bis_hop{}) = pos2[1];
-
-    vec<2> pos3 = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
-    node.storage(x_stimato_bis{}) = pos3[0];
-    node.storage(y_stimato_bis{}) = pos3[1];
-
-    vec<2> pos4 = nBayesianCoop(CALL, node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{}), node.storage(is_anchor{}));
-    node.storage(x_stimato_coop{}) = pos4[0];
-    node.storage(y_stimato_coop{}) = pos4[1];
-
-    node.storage(error<dist_ksource_real>{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis{}), node.storage(y_stimato_bis{})));
-    node.storage(error<dist_dv_hop>{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv{}), node.storage(y_stimato_dv{})));
-    node.storage(error<dist_coop>{}) = distance(node.position(), make_vec(node.storage(x_stimato_coop{}), node.storage(y_stimato_coop{})));
-    node.storage(error<dist_dv_real>{}) = distance(node.position(), make_vec(node.storage(x_stimato_dv_real{}), node.storage(y_stimato_dv_real{})));
-    node.storage(error<dist_ksource_hop>{}) = distance(node.position(), make_vec(node.storage(x_stimato_bis_hop{}), node.storage(y_stimato_bis_hop{})));
-
+    node.storage(error<dist_dv_hop>{}) = distance(node.position(), node.storage(pos_dv_hop{}));
+    node.storage(error<dist_dv_real>{}) = distance(node.position(), node.storage(pos_dv_real{}));
+    node.storage(error<dist_ksource_real>{}) = distance(node.position(), node.storage(pos_ksource_real{}));
+    node.storage(error<dist_ksource_hop>{}) = distance(node.position(), node.storage(pos_ksource_hop{}));
+    node.storage(error<dist_coop>{}) = distance(node.position(), node.storage(pos_coop{}));
+    
     // usage of node storage
     node.storage(node_size{})  = 10;
     node.storage(node_shape{}) = shape::sphere;   
 
 }
 //! @brief Export types used by the main function (update it when expanding the program).
-FUN_EXPORT main_t = export_list<bis_ksource_broadcast_t<tuple<vec<2>, double>>, dvHop_t, nBayesianCoop_t, positionAnchor_t>;
+FUN_EXPORT main_t = export_list<dvHop_t, bis_ksource_t, nBayesianCoop_t>;
 
 } // namespace coordination
 
@@ -190,16 +167,11 @@ using store_t = tuple_store<
     node_size,                  double,
     node_shape,                 shape,
     is_anchor,                  bool,
-    x_stimato_dv,               double,
-    y_stimato_dv,               double,
-    x_stimato_bis_hop,          double,
-    y_stimato_bis_hop,          double,
-    x_stimato_coop,             double,
-    y_stimato_coop,             double,
-    x_stimato_bis,              double,
-    y_stimato_bis,              double,
-    x_stimato_dv_real,          double,
-    y_stimato_dv_real,          double,
+    pos_dv_hop,                 vec<2>,
+    pos_dv_real,                vec<2>,
+    pos_ksource_real,           vec<2>,
+    pos_ksource_hop,            vec<2>,
+    pos_coop,                   vec<2>,
     error<dist_ksource_real>,   double,
     error<dist_dv_hop>,         double,
     error<dist_coop>,           double,

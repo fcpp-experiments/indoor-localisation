@@ -40,7 +40,7 @@ namespace coordination{
 
         return make_vec(x_stimato, y_stimato);
     }
-    FUN_EXPORT nBayesianCoop_t = export_list<tuple<vec<2>, vec<2>, bool>, double, int, broadcast_t<int, tuple<vec<2>, double>>>;
+    FUN_EXPORT nBayesianCoop_t = export_list<tuple<vec<2>, vec<2>, bool>>;
 }
 }
 
