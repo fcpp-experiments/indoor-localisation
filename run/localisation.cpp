@@ -38,31 +38,28 @@ namespace tags {
     //! @brief is anchor or not
     struct is_anchor {};
 
-    //! @brief pos stimata
-    struct pos_dv_real {};
-    //! @brief pos stimata
-    struct pos_dv_hop {};
-    //! @brief pos stimata
-    struct pos_ksource_real {};
-    //! @brief pos stimata
-    struct pos_ksource_hop {};
-    //! @brief pos stimata
-    struct pos_coop {};
-
-    //! @brief error misurazione
+    //! @brief dv real algorithm
     struct dv_real {};
-    //! @brief error misurazione
+    //! @brief dv hop algorithm
     struct dv_hop {};
-    //! @brief error misurazione
+    //! @brief ksource real algorithm
     struct ksource_real {};
-    //! @brief error misurazione
+    //! @brief ksource hop algorithm
     struct ksource_hop {};
-    //! @brief error misurazione
+    //! @brief coop algorithm
     struct coop {};
     
+    //! @brief estimated position for an algorithm
+    template <typename T>
+    struct pos {};
+
+    //! @brief distance error for an algorithm
     template <typename T>
     struct error {};
     
+    //! @brief message size for an algorithm
+    template <typename T>
+    struct msg_size {};
 }
 
 //! @brief The maximum communication range between nodes.
@@ -104,8 +101,8 @@ MAIN() {
         node.storage(is_anchor{}) = false;
         node.storage(node_color{}) = color(GREEN);
          if (node.current_time() == 0){
-            node.storage(pos_coop{})[0] = dis(gen);
-            node.storage(pos_coop{})[1] = dis(gen);
+            node.storage(pos<coop>{})[0] = dis(gen);
+            node.storage(pos<coop>{})[1] = dis(gen);
         }  
     }
 
@@ -113,18 +110,38 @@ MAIN() {
     if (node.storage(is_anchor{}))
         my_anchor_keys = { id };
 
-    node.storage(pos_dv_hop{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 0);
-    node.storage(pos_dv_real{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
-    node.storage(pos_ksource_hop{}) = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0); 
-    node.storage(pos_ksource_real{}) = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
-    node.storage(pos_coop{}) = nBayesianCoop(CALL, node.storage(pos_coop{})[0], node.storage(pos_coop{})[1], node.storage(is_anchor{}));
+    size_t msiz_old = node.cur_msg_size(), msiz_new;
 
-    node.storage(error<dv_hop>{}) = distance(node.position(), node.storage(pos_dv_hop{}));
-    node.storage(error<dv_real>{}) = distance(node.position(), node.storage(pos_dv_real{}));
-    node.storage(error<ksource_real>{}) = distance(node.position(), node.storage(pos_ksource_real{}));
-    node.storage(error<ksource_hop>{}) = distance(node.position(), node.storage(pos_ksource_hop{}));
-    node.storage(error<coop>{}) = distance(node.position(), node.storage(pos_coop{}));
-    
+    node.storage(pos<dv_hop>{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 0);
+    node.storage(error<dv_hop>{}) = distance(node.position(), node.storage(pos<dv_hop>{}));
+    msiz_new = node.cur_msg_size();
+    node.storage(msg_size<dv_hop>{}) = msiz_new - msiz_old;
+    msiz_old = msiz_new;
+
+    node.storage(pos<dv_real>{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
+    node.storage(error<dv_real>{}) = distance(node.position(), node.storage(pos<dv_real>{}));
+    msiz_new = node.cur_msg_size();
+    node.storage(msg_size<dv_real>{}) = msiz_new - msiz_old;
+    msiz_old = msiz_new;
+
+    node.storage(pos<ksource_hop>{}) = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0);
+    node.storage(error<ksource_hop>{}) = distance(node.position(), node.storage(pos<ksource_hop>{}));
+    msiz_new = node.cur_msg_size();
+    node.storage(msg_size<ksource_hop>{}) = msiz_new - msiz_old;
+    msiz_old = msiz_new;
+
+    node.storage(pos<ksource_real>{}) = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
+    node.storage(error<ksource_real>{}) = distance(node.position(), node.storage(pos<ksource_real>{}));
+    msiz_new = node.cur_msg_size();
+    node.storage(msg_size<ksource_real>{}) = msiz_new - msiz_old;
+    msiz_old = msiz_new;
+
+    node.storage(pos<coop>{}) = nBayesianCoop(CALL, node.storage(pos<coop>{})[0], node.storage(pos<coop>{})[1], node.storage(is_anchor{}));
+    node.storage(error<coop>{}) = distance(node.position(), node.storage(pos<coop>{}));
+    msiz_new = node.cur_msg_size();
+    node.storage(msg_size<coop>{}) = msiz_new - msiz_old;
+    msiz_old = msiz_new;
+
     // usage of node storage
     node.storage(node_size{})  = 10;
     node.storage(node_shape{}) = shape::sphere;   
@@ -167,27 +184,41 @@ using store_t = tuple_store<
     node_size,                  double,
     node_shape,                 shape,
     is_anchor,                  bool,
-    pos_dv_hop,                 vec<2>,
-    pos_dv_real,                vec<2>,
-    pos_ksource_hop,            vec<2>,
-    pos_ksource_real,           vec<2>,
-    pos_coop,                   vec<2>,
-    error<dv_hop>,         double,
-    error<dv_real>,        double,
-    error<ksource_hop>,    double,
-    error<ksource_real>,   double,
-    error<coop>,           double
+    pos<dv_hop>,                vec<2>,
+    pos<dv_real>,               vec<2>,
+    pos<ksource_hop>,           vec<2>,
+    pos<ksource_real>,          vec<2>,
+    pos<coop>,                  vec<2>,
+    error<dv_hop>,              double,
+    error<dv_real>,             double,
+    error<ksource_hop>,         double,
+    error<ksource_real>,        double,
+    error<coop>,                double,
+    msg_size<dv_hop>,           size_t,
+    msg_size<dv_real>,          size_t,
+    msg_size<ksource_hop>,      size_t,
+    msg_size<ksource_real>,     size_t,
+    msg_size<coop>,             size_t
 >;
 //! @brief The tags and corresponding aggregators to be logged (change as needed).
 using aggregator_t = aggregators<
-    error<dv_hop>,         aggregator::mean<double>,
-    error<dv_real>,        aggregator::mean<double>,
-    error<ksource_hop>,    aggregator::mean<double>,
-    error<ksource_real>,   aggregator::mean<double>,
-    error<coop>,           aggregator::mean<double>
+    error<dv_hop>,          aggregator::mean<double>,
+    error<dv_real>,         aggregator::mean<double>,
+    error<ksource_hop>,     aggregator::mean<double>,
+    error<ksource_real>,    aggregator::mean<double>,
+    error<coop>,            aggregator::mean<double>,
+    msg_size<dv_hop>,       aggregator::mean<double>,
+    msg_size<dv_real>,      aggregator::mean<double>,
+    msg_size<ksource_hop>,  aggregator::mean<double>,
+    msg_size<ksource_real>, aggregator::mean<double>,
+    msg_size<coop>,         aggregator::mean<double>
 >;
-//! @brief The plotter object collecting error over time.
-using plot_t = plot::plotter<aggregator_t, plot::time, error>;
+//! @brief Plot of error over time.
+using error_plot_t = plot::plotter<aggregator_t, plot::time, error>;
+//! @brief Plot of message size over time.
+using msize_plot_t = plot::plotter<aggregator_t, plot::time, msg_size>;
+//! @brief Plotter class for all plots.
+using plot_t = plot::join<error_plot_t, msize_plot_t>;
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
