@@ -16,10 +16,15 @@ namespace coordination{
             std::unordered_map<int, int,    fcpp::common::hash<int>>  // y_map
         >;
 
-    FUN vec<2> dvHop(ARGS, int nodeid, bool is_anchor, std::vector<int> my_anchor_keys, field<real_t> nbr_dist, real_t info_speed){ CODE
+    FUN vec<2> dvHop(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){ CODE
 
         double x_est;
         double y_est;
+
+        int nodeid = node.uid;
+        std::vector<int> my_anchor_keys;
+        if (is_anchor)
+            my_anchor_keys = { nodeid };
 
         auto state = old(CALL, dvhop_state_t{0.0, {}, {}, {}, {}, {}}, [&](dvhop_state_t prev){
             auto next = prev;

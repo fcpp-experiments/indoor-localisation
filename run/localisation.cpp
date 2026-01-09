@@ -87,7 +87,6 @@ MAIN() {
     // GRIGLIA or PERIMETRO
     AnchorLayout anchor_layout = PERIMETRO;
 
-    int id = node.uid;
     double side = 500.0;
     double step = 100.0;
     int rows = 4;
@@ -116,15 +115,11 @@ MAIN() {
         }  
     }
 
-    std::vector<int> my_anchor_keys;
-    if (node.storage(is_anchor{}))
-        my_anchor_keys = { id };
-
     monitor_algorithm(CALL, dv_hop{}, [&](){
-        return dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 0);
+        return dvHop(CALL, node.storage(is_anchor{}), 1, 0);
     });
     monitor_algorithm(CALL, dv_real{}, [&](){
-        return dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
+        return dvHop(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
     });
     monitor_algorithm(CALL, ksource_hop{}, [&](){
         return bis_ksource(CALL, node.storage(is_anchor{}), 1, 0);
