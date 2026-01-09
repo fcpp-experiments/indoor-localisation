@@ -187,6 +187,8 @@ using aggregator_t = aggregators<
     error<dist_ksource_hop>,    aggregator::mean<double>,
     error<dist_dv_real>,        aggregator::mean<double>
 >;
+//! @brief The plotter object collecting error over time.
+using plot_t = plot::plotter<aggregator_t, plot::time, error>;
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
@@ -200,6 +202,7 @@ DECLARE_OPTIONS(list,
     spawn_schedule<spawn_s>, // the sequence generator of node creation events on the network
     store_t,       // the contents of the node storage
     aggregator_t,  // the tags and corresponding aggregators to be logged
+    plot_type<plot_t>, // the plotter object
     init<
         x,      rectangle_d // initialise position randomly in a rectangle for new nodes
     >,
@@ -219,13 +222,19 @@ DECLARE_OPTIONS(list,
 int main() {
     using namespace fcpp;
 
-    //! @brief The network object type (interactive simulator with given options).
-    using net_t = component::interactive_simulator<option::list>::net;
-    //! @brief The initialisation values (simulation name).
-    auto init_v = common::make_tagged_tuple<option::name>("Exercises");
-    //! @brief Construct the network object.
-    net_t network{init_v};
-    //! @brief Run the simulation until exit.
-    network.run();
+    option::plot_t p;
+    std::cout << "/*\n";
+    {
+        //! @brief The network object type (interactive simulator with given options).
+        using net_t = component::interactive_simulator<option::list>::net;
+        //! @brief The initialisation values (simulation name).
+        auto init_v = common::make_tagged_tuple<option::name, option::plotter>("Exercises", &p);
+        //! @brief Construct the network object.
+        net_t network{init_v};
+        //! @brief Run the simulation until exit.
+        network.run();
+    }
+    std::cout << "*/\n";
+    std::cout << plot::file("localisation", p.build());
     return 0;
 }

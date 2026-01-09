@@ -15,4 +15,4 @@ project(
 )
 
 # target declaration
-fcpp_target(./run/exercises.cpp ON)
+fcpp_target(./run/localisation.cpp ON)
