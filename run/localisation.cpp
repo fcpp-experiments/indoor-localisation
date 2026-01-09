@@ -50,15 +50,15 @@ namespace tags {
     struct pos_coop {};
 
     //! @brief error misurazione
-    struct dist_dv_real {};
+    struct dv_real {};
     //! @brief error misurazione
-    struct dist_dv_hop {};
+    struct dv_hop {};
     //! @brief error misurazione
-    struct dist_ksource_real {};
+    struct ksource_real {};
     //! @brief error misurazione
-    struct dist_ksource_hop {};
+    struct ksource_hop {};
     //! @brief error misurazione
-    struct dist_coop {};
+    struct coop {};
     
     template <typename T>
     struct error {};
@@ -119,11 +119,11 @@ MAIN() {
     node.storage(pos_ksource_real{}) = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
     node.storage(pos_coop{}) = nBayesianCoop(CALL, node.storage(pos_coop{})[0], node.storage(pos_coop{})[1], node.storage(is_anchor{}));
 
-    node.storage(error<dist_dv_hop>{}) = distance(node.position(), node.storage(pos_dv_hop{}));
-    node.storage(error<dist_dv_real>{}) = distance(node.position(), node.storage(pos_dv_real{}));
-    node.storage(error<dist_ksource_real>{}) = distance(node.position(), node.storage(pos_ksource_real{}));
-    node.storage(error<dist_ksource_hop>{}) = distance(node.position(), node.storage(pos_ksource_hop{}));
-    node.storage(error<dist_coop>{}) = distance(node.position(), node.storage(pos_coop{}));
+    node.storage(error<dv_hop>{}) = distance(node.position(), node.storage(pos_dv_hop{}));
+    node.storage(error<dv_real>{}) = distance(node.position(), node.storage(pos_dv_real{}));
+    node.storage(error<ksource_real>{}) = distance(node.position(), node.storage(pos_ksource_real{}));
+    node.storage(error<ksource_hop>{}) = distance(node.position(), node.storage(pos_ksource_hop{}));
+    node.storage(error<coop>{}) = distance(node.position(), node.storage(pos_coop{}));
     
     // usage of node storage
     node.storage(node_size{})  = 10;
@@ -169,23 +169,22 @@ using store_t = tuple_store<
     is_anchor,                  bool,
     pos_dv_hop,                 vec<2>,
     pos_dv_real,                vec<2>,
-    pos_ksource_real,           vec<2>,
     pos_ksource_hop,            vec<2>,
+    pos_ksource_real,           vec<2>,
     pos_coop,                   vec<2>,
-    error<dist_ksource_real>,   double,
-    error<dist_dv_hop>,         double,
-    error<dist_coop>,           double,
-    error<dist_ksource_hop>,    double,
-    error<dist_dv_real>,        double
-    
+    error<dv_hop>,         double,
+    error<dv_real>,        double,
+    error<ksource_hop>,    double,
+    error<ksource_real>,   double,
+    error<coop>,           double
 >;
 //! @brief The tags and corresponding aggregators to be logged (change as needed).
 using aggregator_t = aggregators<
-    error<dist_ksource_real>,   aggregator::mean<double>,
-    error<dist_coop>,           aggregator::mean<double>,
-    error<dist_dv_hop>,         aggregator::mean<double>,
-    error<dist_ksource_hop>,    aggregator::mean<double>,
-    error<dist_dv_real>,        aggregator::mean<double>
+    error<dv_hop>,         aggregator::mean<double>,
+    error<dv_real>,        aggregator::mean<double>,
+    error<ksource_hop>,    aggregator::mean<double>,
+    error<ksource_real>,   aggregator::mean<double>,
+    error<coop>,           aggregator::mean<double>
 >;
 //! @brief The plotter object collecting error over time.
 using plot_t = plot::plotter<aggregator_t, plot::time, error>;
