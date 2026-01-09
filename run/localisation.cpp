@@ -93,10 +93,10 @@ MAIN() {
     int cols = 5;
     int total_anchors = rows * cols;
 
-    if (id < total_anchors) {
+    if (node.uid < total_anchors) {
         node.position() = positionAnchor(
             CALL,
-            id,
+            node.uid,
             anchor_layout,
             side, 
             step, 
