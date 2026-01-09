@@ -65,6 +65,16 @@ namespace tags {
 //! @brief The maximum communication range between nodes.
 constexpr size_t communication_range = 100;
 
+
+//! @brief Runs an algorithm and saves monitoring data.
+GEN(A, F) void monitor_algorithm(ARGS, A, F&& fun) { CODE
+    using namespace tags;
+    size_t msiz_pre = node.cur_msg_size();
+    node.storage(pos<A>{}) = std::forward<F>(fun)();
+    node.storage(error<A>{}) = distance(node.position(), node.storage(pos<A>{}));
+    node.storage(msg_size<A>{}) = node.cur_msg_size() - msiz_pre;
+}
+
 // @brief Main function.
 MAIN() {
     // import tag names in the local scope.
@@ -110,37 +120,21 @@ MAIN() {
     if (node.storage(is_anchor{}))
         my_anchor_keys = { id };
 
-    size_t msiz_old = node.cur_msg_size(), msiz_new;
-
-    node.storage(pos<dv_hop>{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 0);
-    node.storage(error<dv_hop>{}) = distance(node.position(), node.storage(pos<dv_hop>{}));
-    msiz_new = node.cur_msg_size();
-    node.storage(msg_size<dv_hop>{}) = msiz_new - msiz_old;
-    msiz_old = msiz_new;
-
-    node.storage(pos<dv_real>{}) = dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
-    node.storage(error<dv_real>{}) = distance(node.position(), node.storage(pos<dv_real>{}));
-    msiz_new = node.cur_msg_size();
-    node.storage(msg_size<dv_real>{}) = msiz_new - msiz_old;
-    msiz_old = msiz_new;
-
-    node.storage(pos<ksource_hop>{}) = bis_ksource(CALL, node.storage(is_anchor{}), 1, 0);
-    node.storage(error<ksource_hop>{}) = distance(node.position(), node.storage(pos<ksource_hop>{}));
-    msiz_new = node.cur_msg_size();
-    node.storage(msg_size<ksource_hop>{}) = msiz_new - msiz_old;
-    msiz_old = msiz_new;
-
-    node.storage(pos<ksource_real>{}) = bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
-    node.storage(error<ksource_real>{}) = distance(node.position(), node.storage(pos<ksource_real>{}));
-    msiz_new = node.cur_msg_size();
-    node.storage(msg_size<ksource_real>{}) = msiz_new - msiz_old;
-    msiz_old = msiz_new;
-
-    node.storage(pos<coop>{}) = nBayesianCoop(CALL, node.storage(pos<coop>{})[0], node.storage(pos<coop>{})[1], node.storage(is_anchor{}));
-    node.storage(error<coop>{}) = distance(node.position(), node.storage(pos<coop>{}));
-    msiz_new = node.cur_msg_size();
-    node.storage(msg_size<coop>{}) = msiz_new - msiz_old;
-    msiz_old = msiz_new;
+    monitor_algorithm(CALL, dv_hop{}, [&](){
+        return dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, 1, 0);
+    });
+    monitor_algorithm(CALL, dv_real{}, [&](){
+        return dvHop(CALL, id, node.storage(is_anchor{}), my_anchor_keys, node.nbr_dist(), 80);
+    });
+    monitor_algorithm(CALL, ksource_hop{}, [&](){
+        return bis_ksource(CALL, node.storage(is_anchor{}), 1, 0);
+    });
+    monitor_algorithm(CALL, ksource_real{}, [&](){
+        return bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
+    });
+    monitor_algorithm(CALL, coop{}, [&](){
+        return nBayesianCoop(CALL, node.storage(pos<coop>{})[0], node.storage(pos<coop>{})[1], node.storage(is_anchor{}));
+    });
 
     // usage of node storage
     node.storage(node_size{})  = 10;
