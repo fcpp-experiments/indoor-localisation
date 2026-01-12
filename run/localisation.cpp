@@ -79,10 +79,6 @@ GEN(A, F) void monitor_algorithm(ARGS, A, F&& fun) { CODE
 MAIN() {
     // import tag names in the local scope.
     using namespace tags;
-
-    std::random_device rd;  
-    std::mt19937 gen(rd()); 
-    std::uniform_int_distribution<> dis(0, 500); 
     
     // GRIGLIA or PERIMETRO
     AnchorLayout anchor_layout = PERIMETRO;
@@ -109,10 +105,6 @@ MAIN() {
     } else {
         node.storage(is_anchor{}) = false;
         node.storage(node_color{}) = color(GREEN);
-         if (node.current_time() == 0){
-            node.storage(pos<coop>{})[0] = dis(gen);
-            node.storage(pos<coop>{})[1] = dis(gen);
-        }  
     }
 
     monitor_algorithm(CALL, dv_hop{}, [&](){
@@ -128,7 +120,7 @@ MAIN() {
         return bis_ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
     });
     monitor_algorithm(CALL, coop{}, [&](){
-        return nBayesianCoop(CALL, node.storage(pos<coop>{})[0], node.storage(pos<coop>{})[1], node.storage(is_anchor{}));
+        return nBayesianCoop(CALL, node.storage(is_anchor{}));
     });
 
     // usage of node storage
