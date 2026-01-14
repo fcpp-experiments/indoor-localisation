@@ -40,7 +40,7 @@ namespace coordination{
                 using fcpp::coordination::abf_hops;
                 bool is_source = (node.uid == nodeid);
                 //int d = abf_hops(CALL, is_source);
-                real_t d = bis_distance(CALL, is_anchor, 1, info_speed, [&](){
+                real_t d = bis_distance(CALL, is_source, 1, info_speed, [&](){
                     return nbr_dist;
                 });
                 auto r = broadcast(CALL, d, make_tuple(node.position(), correction));
@@ -79,7 +79,7 @@ namespace coordination{
         return pos;
 
     }
-    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<real_t, tuple<vec<2>, double>>, bis_distance_t>;
+    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<int, tuple<vec<2>, double>>, bis_distance_t, abf_hops_t, double>;
 
 }
 }
