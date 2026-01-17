@@ -18,7 +18,7 @@ namespace coordination{
         double y_est;
 
         double correction = old(CALL, 1, [&](double correction){
-            auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), 5, 1, info_speed, [&](){
+            auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), 20, 1, info_speed, [&](){
                 return nbr_dist;
             });
 

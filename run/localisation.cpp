@@ -51,6 +51,9 @@ namespace tags {
     struct ksource_hop {};
     //! @brief coop algorithm
     struct coop {};
+
+    //! @brief coop algorithm
+    struct ffff {};
     
     //! @brief estimated position for an algorithm
     template <typename T>
@@ -126,6 +129,23 @@ MAIN() {
         return nBayesianCoop(CALL, node.storage(is_anchor{}));
     });
 
+
+
+    std::unordered_map<int, double> distanze = {
+    {5, 300.00}, {4, 180.47}, {1, 180.47}, {3, 100.00}, {2, 100.00}
+};
+
+std::unordered_map<int, int> coords_x = {
+    {5, 500}, {4, 400}, {1, 100}, {3, 300}, {2, 200}
+};
+
+std::unordered_map<int, int> coords_y = {
+    {5, 500}, {4, 500}, {1, 500}, {3, 500}, {2, 500}
+};
+
+fcpp::vec<2> posizione_stimata = trilaterazione(CALL, false, distanze, coords_x, coords_y);
+node.storage(ffff{}) = posizione_stimata;
+
     // usage of node storage
     node.storage(node_size{})  = 10;
     node.storage(node_shape{}) = shape::sphere;   
@@ -183,7 +203,8 @@ using store_t = tuple_store<
     msg_size<dv_real>,          size_t,
     msg_size<ksource_hop>,      size_t,
     msg_size<ksource_real>,     size_t,
-    msg_size<coop>,             size_t
+    msg_size<coop>,             size_t,
+    ffff,                      vec<2>
 >;
 //! @brief The tags and corresponding aggregators to be logged (change as needed).
 using aggregator_t = aggregators<
