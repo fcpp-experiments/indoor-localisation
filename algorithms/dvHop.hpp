@@ -9,11 +9,11 @@ namespace coordination{
     
     using dvhop_state_t = tuple<
             double, // correction
-            std::unordered_map<int, real_t,    fcpp::common::hash<int>>, // hop_map
-            std::unordered_map<int, double,    fcpp::common::hash<int>>, // correction map
-            std::unordered_map<int, double, fcpp::common::hash<int>>, // dist_map
-            std::unordered_map<int, int,    fcpp::common::hash<int>>, // x_map
-            std::unordered_map<int, int,    fcpp::common::hash<int>>  // y_map
+            std::unordered_map<int, real_t>, // hop_map
+            std::unordered_map<int, double>, // correction map
+            std::unordered_map<int, double>, // dist_map
+            std::unordered_map<int, int>, // x_map
+            std::unordered_map<int, int>  // y_map
         >;
 
     FUN vec<2> dvHop(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){ CODE

@@ -29,6 +29,9 @@ namespace coordination {
 
 //! @brief Tags used in the node storage.
 namespace tags {
+    //! @brief General debugging information.
+    struct debug {};
+
     //! @brief Color of the current node.
     struct node_color {};
     //! @brief Size of the current node.
@@ -161,6 +164,7 @@ using spawn_s = sequence::multiple_n<node_num, 0>;
 using rectangle_d = distribution::rect_n<1, 0, 0, 500, 500>;
 //! @brief The contents of the node storage as tags and associated types.
 using store_t = tuple_store<
+    debug,                      std::string,
     node_color,                 color,
     node_size,                  double,
     node_shape,                 shape,

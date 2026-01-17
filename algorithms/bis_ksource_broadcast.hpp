@@ -6,12 +6,13 @@
 
 namespace fcpp{
 namespace coordination{
+
     FUN vec<2> bis_ksource(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){CODE
-        std::unordered_map<int, real_t, fcpp::common::hash<int>> hop_map;
-        std::unordered_map<int,int, fcpp::common::hash<int>> anchor_x_map;
-        std::unordered_map<int,int, fcpp::common::hash<int>> anchor_y_map;
-        std::unordered_map<int,int, fcpp::common::hash<int>> anchor_correction_map;
-        std::unordered_map<int,double, fcpp::common::hash<int>> anchor_distance_map;
+        std::unordered_map<int, real_t> hop_map;
+        std::unordered_map<int,int> anchor_x_map;
+        std::unordered_map<int,int> anchor_y_map;
+        std::unordered_map<int,int> anchor_correction_map;
+        std::unordered_map<int,double> anchor_distance_map;
 
         double x_est;
         double y_est;

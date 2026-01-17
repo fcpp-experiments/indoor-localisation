@@ -5,7 +5,7 @@
 
 namespace fcpp{
 namespace coordination{
-    FUN vec<2> trilaterazione(ARGS, bool is_anchor, std::unordered_map<int,double, fcpp::common::hash<int>> anchor_distance_map, std::unordered_map<int,int, fcpp::common::hash<int>> anchor_x_map, std::unordered_map<int,int, fcpp::common::hash<int>> anchor_y_map){ CODE
+    FUN vec<2> trilaterazione(ARGS, bool is_anchor, std::unordered_map<int,double> anchor_distance_map, std::unordered_map<int,int> anchor_x_map, std::unordered_map<int,int> anchor_y_map){ CODE
         double x_est;
         double y_est;
         if (!is_anchor){
