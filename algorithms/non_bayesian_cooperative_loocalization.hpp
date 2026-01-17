@@ -32,9 +32,9 @@ FUN vec<2> nBayesianCoop(ARGS, bool is_anchor){ CODE
 
                 //Vettore direzione dal nodo al vicino
                 vec<2> diff = searchPos - pos_stim;
-                double norm = sqrt(diff[0]*diff[0] + diff[1]*diff[1]); // lunghezza del vettore differenza
-                if (norm > 0) {
-                    vec<2> dir = diff / norm; // direzione unitaria
+                double length = norm(diff); // lunghezza del vettore differenza
+                if (length > 0) {
+                    vec<2> dir = diff / length; // direzione unitaria
                                               // 4. Aggiorna posizione
                     searchPos += alpha * ex * dir;
                 }
