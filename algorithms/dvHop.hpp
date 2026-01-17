@@ -1,87 +1,61 @@
-#ifndef FCPP_DV_HOP_H_
-#define FCPP_DV_HOP_H_
-#include "lib/coordination.hpp"
-#include "lib/data.hpp"
-#include "trilateration.hpp"
+#ifndef DV_H_
+#define DV_H_
 
-namespace fcpp{
-namespace coordination{
-    
-    using dvhop_state_t = tuple<
-            double, // correction
-            std::unordered_map<int, real_t>, // hop_map
-            std::unordered_map<int, double>, // correction map
-            std::unordered_map<int, double>, // dist_map
-            std::unordered_map<int, int>, // x_map
-            std::unordered_map<int, int>  // y_map
-        >;
+#include "lib/common/option.hpp"
+#include "lib/coordination/spreading.hpp"
+#include "lib/data/vec.hpp"
 
-    FUN vec<2> dvHop(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){ CODE
+#include "multilateration.hpp"
 
-        double x_est;
-        double y_est;
+/**
+ * @brief Namespace containing all the objects in the FCPP library.
+ */
+namespace fcpp {
 
-        int nodeid = node.uid;
-        std::vector<int> my_anchor_keys;
-        if (is_anchor)
-            my_anchor_keys = { nodeid };
+//! @brief Namespace containing the libraries of coordination routines.
+namespace coordination {
 
-        auto state = old(CALL, dvhop_state_t{0.0, {}, {}, {}, {}, {}}, [&](dvhop_state_t prev){
-            auto next = prev;
+//! @brief Estimates the node position by multilateration with every other anchor.
+FUN vec<2> dv(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){ CODE
+    std::unordered_map<device_t,real_t> anchor_distance_map;
+    std::unordered_map<device_t,vec<2>> anchor_pos_map;
+    common::option<device_t> my_anchor_keys;
+    if (is_anchor) my_anchor_keys = node.uid;
 
-            auto& correction = get<0>(next);
-            auto& hop_map = get<1>(next);
-            auto& anchor_correction_map = get<2>(next);
-            auto& anchor_distance_map = get<3>(next);
-            auto& anchor_x_map = get<4>(next);
-            auto& anchor_y_map = get<5>(next);
-
-            auto hop_map_all = spawn(CALL, [&](int nodeid){
-                using fcpp::coordination::abf_hops;
-                bool is_source = (node.uid == nodeid);
-                //int d = abf_hops(CALL, is_source);
-                real_t d = bis_distance(CALL, is_source, 1, info_speed, [&](){
-                    return nbr_dist;
-                });
-                auto r = broadcast(CALL, d, make_tuple(node.position(), correction));
-                return make_tuple(make_tuple(d, get<0>(r), get<1>(r)), true);
-            }, my_anchor_keys); 
-
-            for (auto const& [id, t] : hop_map_all) {
-                real_t hop = get<0>(t);
-                vec<2> pos = get<1>(t);
-                double corr = get<2>(t);
-                hop_map[id] = hop;
-                anchor_x_map[id] = pos[0];
-                anchor_y_map[id] = pos[1];
-                anchor_correction_map[id] = corr;
-                if (is_anchor)
-                    anchor_distance_map[id] = distance(node.position(), pos);
-                else
-                    anchor_distance_map[id] = corr * hop;
+    old(CALL, 1.0, [&](real_t correction){
+        auto hop_map_all = spawn(CALL, [&](device_t anchor_id){
+            real_t dist = bis_distance(CALL, node.uid == anchor_id, 1, info_speed, [&](){
+                return nbr_dist;
+            });
+            auto t = broadcast(CALL, dist, make_tuple(node.position(), correction));
+            return make_tuple(make_tuple(dist, t), true);
+        }, my_anchor_keys);
+        real_t apx_dist = 0;
+        real_t true_dist = 0;
+        for (auto const& [id, t] : hop_map_all) {
+            real_t dist = get<0>(t);
+            vec<2> pos = get<0>(get<1>(t));
+            real_t corr = get<1>(get<1>(t));
+            if (is_anchor) {
+                true_dist += distance(node.position(), pos);
+                apx_dist += dist;
+            } else {
+                anchor_pos_map[id] = pos;
+                anchor_distance_map[id] = dist * corr;
             }
-
-            real_t hop = 0;
-            double distance = 0;
-            if (is_anchor){
-                for (auto const& [key, value] : anchor_distance_map){
-                    distance += value;
-                    hop += hop_map[key];
-                }   
-                if (distance != 0 && hop != 0)
-                    correction = distance/hop;
-            }
-
-            return next;
-        });
-
-        vec<2> pos = trilaterazione(CALL, is_anchor, get<3>(state), get<4>(state), get<5>(state));
-        return pos;
-
-    }
-    FUN_EXPORT dvHop_t = export_list<dvhop_state_t, broadcast_t<int, tuple<vec<2>, double>>, bis_distance_t, abf_hops_t, double>;
-
+        }
+        if (is_anchor && true_dist != 0 && apx_dist != 0)
+            correction = true_dist/apx_dist;
+        return correction;
+    });
+    if (is_anchor) return node.position();
+    return multilateration(anchor_pos_map, anchor_distance_map);
 }
-}
+//! @brief Export list for dv.
+FUN_EXPORT dv_t = export_list<real_t, spawn_t<device_t, bool>, broadcast_t<real_t, tuple<vec<2>, real_t>>, bis_distance_t>;
+
+} // namespace coordination
+
+} // namespace fcpp
 
 #endif
