@@ -7,31 +7,18 @@
 namespace fcpp{
 namespace coordination{
 
-    using dvhop_state_t = tuple<
-        double, // correction
-        std::unordered_map<int, real_t>, // hop_map
-        std::unordered_map<int, double>, // anchor x
-        std::unordered_map<int, double>, // anchor y
-        std::unordered_map<int, int>, //anchor corr map
-        std::unordered_map<int, int>  // anchor distance map
-    >;
-
-
     FUN vec<2> bis_ksource(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){CODE
+        std::unordered_map<int, real_t> hop_map;
+        std::unordered_map<int,int> anchor_x_map;
+        std::unordered_map<int,int> anchor_y_map;
+        std::unordered_map<int,int> anchor_correction_map;
+        std::unordered_map<int,double> anchor_distance_map;
+
         double x_est;
         double y_est;
 
-        auto state = old(CALL, dvhop_state_t{0.0, {}, {}, {}, {}, {}}, [&](dvhop_state_t prev){
-            auto next = prev;
-
-            auto& correction = get<0>(next);
-            auto& hop_map = get<1>(next);
-            auto& anchor_correction_map = get<2>(next);
-            auto& anchor_distance_map = get<3>(next);
-            auto& anchor_x_map = get<4>(next);
-            auto& anchor_y_map = get<5>(next);
-
-            auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), 20, 1, info_speed, [&](){
+        double correction = old(CALL, 1, [&](double correction){
+            auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), 5, 1, info_speed, [&](){
                 return nbr_dist;
             });
 
@@ -61,10 +48,10 @@ namespace coordination{
                     correction = distance/hop;
             }
 
-            return next;
+            return correction;
         });
 
-        vec<2> pos = trilaterazione(CALL, is_anchor, get<3>(state), get<4>(state), get<5>(state));
+        vec<2> pos = trilaterazione(CALL, is_anchor, anchor_distance_map, anchor_x_map, anchor_y_map);
         return pos;
 
     }
