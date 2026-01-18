@@ -1,5 +1,5 @@
-#ifndef FCPP_NON_BAYESIAN_COOPERATIVE_LOOCALIZATION_H_
-#define FCPP_NON_BAYESIAN_COOPERATIVE_LOOCALIZATION_H_
+#ifndef COOP_H_
+#define COOP_H_
 
 #include "lib/coordination.hpp"
 #include "lib/data.hpp"

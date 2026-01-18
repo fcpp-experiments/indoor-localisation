@@ -2,13 +2,16 @@
 
 /**
  * @file localisation.cpp
- * @brief TODO.
+ * @brief Cooperative indoor localisation case study.
  */
 
+#ifndef LOCALISATION_H_
+#define LOCALISATION_H_
+
 #include "lib/fcpp.hpp"
-#include "algorithms/dvHop.hpp"
-#include "algorithms/bis_ksource_broadcast.hpp"
-#include "algorithms/non_bayesian_cooperative_loocalization.hpp"
+#include "lib/dv.hpp"
+#include "lib/ksource.hpp"
+#include "lib/coop.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -222,24 +225,4 @@ DECLARE_OPTIONS(list,
 
 } // namespace fcpp
 
-
-//! @brief The main function.
-int main() {
-    using namespace fcpp;
-
-    option::plot_t p;
-    std::cout << "/*\n";
-    {
-        //! @brief The network object type (interactive simulator with given options).
-        using net_t = component::interactive_simulator<option::list>::net;
-        //! @brief The initialisation values (simulation name).
-        auto init_v = common::make_tagged_tuple<option::name, option::plotter>("Cooperative Indoor Localisation", &p);
-        //! @brief Construct the network object.
-        net_t network{init_v};
-        //! @brief Run the simulation until exit.
-        network.run();
-    }
-    std::cout << "*/\n";
-    std::cout << plot::file("localisation", p.build());
-    return 0;
-}
+#endif // LOCALISATION_H_

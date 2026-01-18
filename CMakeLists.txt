@@ -9,10 +9,10 @@ fcpp_setup()
 
 # project description
 project(
-    exercises
+    localisation
     VERSION 0.0.0
-    DESCRIPTION "Quick-start aggregate computing exercises."
+    DESCRIPTION "Cooperative indoor localisation case study."
 )
 
 # target declaration
-fcpp_target(./run/localisation.cpp ON)
+fcpp_target(./run/graphic.cpp ON)
