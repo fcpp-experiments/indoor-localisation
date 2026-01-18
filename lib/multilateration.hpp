@@ -3,10 +3,15 @@
 
 #include "lib/data/vec.hpp"
 
+/**
+ * @brief Namespace containing all the objects in the FCPP library.
+ */
 namespace fcpp {
 
+//! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 
+//! @brief Nonlinear least-squares 2D multilateration with the Levenberg–Marquardt method.
 vec<2> multilateration(std::unordered_map<device_t, vec<2>> anchor_pos, std::unordered_map<device_t, real_t> anchor_dist) {
     // Initial approximation: anchors centroid
     vec<2> p{0,0};
@@ -76,4 +81,4 @@ vec<2> multilateration(std::unordered_map<device_t, vec<2>> anchor_pos, std::uno
 
 } // namespace fcpp
 
-#endif
+#endif // MULTILATERATION_H_

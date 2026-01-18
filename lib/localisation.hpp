@@ -109,7 +109,7 @@ MAIN() {
         return ksource(CALL, node.storage(is_anchor{}), node.nbr_dist(), 80);
     });
     monitor_algorithm(CALL, coop{}, [&](){
-        return nBayesianCoop(CALL, node.storage(is_anchor{}));
+        return nb_coop(CALL, node.storage(is_anchor{}), node.nbr_dist());
     });
     monitor_algorithm(CALL, ideal{}, [&](){
         return node.position();
@@ -124,7 +124,7 @@ MAIN() {
     node.storage(node_color{}) = node.storage(is_anchor{}) ? color(RED) : color(GREEN);
 }
 //! @brief Export list for the main function.
-FUN_EXPORT main_t = export_list<dv_t, ksource_t, nBayesianCoop_t>;
+FUN_EXPORT main_t = export_list<dv_t, ksource_t, nb_coop_t>;
 //! @brief Storage list for the main function.
 FUN_EXPORT main_s = storage_list<
     tags::debug,        std::string,
@@ -171,13 +171,16 @@ using msize_plot_t = plot::plotter<coordination::main_a, plot::time, msg_size>;
 //! @brief Plotter class for all plots.
 using plot_t = plot::join<error_plot_t, msize_plot_t>;
 
+//! @brief End of simulated time.
+constexpr size_t end_time = 100;
 //! @brief Description of the round schedule.
 using round_s = sequence::periodic<
-    distribution::interval_n<times_t, 0, 1>,    // uniform time in the [0,1] interval for start
-    distribution::weibull_n<times_t, 10, 1, 10> // weibull-distributed time for interval (10/10=1 mean, 1/10=0.1 deviation)
+    distribution::interval_n<times_t, 0, 1>,        // uniform time in the [0,1] interval for start
+    distribution::weibull_n<times_t, 10, 1, 10>,    // weibull-distributed time for interval (1±0.1)
+    distribution::constant_n<times_t, end_time+2>   // the constant end_time+2 number for end
 >;
 //! @brief The sequence of network snapshots (one every simulated second).
-using log_s = sequence::periodic_n<1, 0, 1>;
+using log_s = sequence::periodic_n<1, 0, 1, end_time>;
 
 //! @brief The connection predicate (100% at 0m, 50% at 80m, 0% at 100m).
 using connect_t = connect::radial<80, connect::fixed<100>>;

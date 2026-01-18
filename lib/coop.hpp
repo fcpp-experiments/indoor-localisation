@@ -4,17 +4,21 @@
 #include "lib/coordination.hpp"
 #include "lib/data.hpp"
 
+/**
+ * @brief Namespace containing all the objects in the FCPP library.
+ */
 namespace fcpp {
 
+//! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 
-FUN vec<2> nBayesianCoop(ARGS, bool is_anchor){ CODE
+//! @brief Non-bayesian cooperative localization.
+FUN vec<2> nb_coop(ARGS, bool is_anchor, field<real_t> nbr_dist){ CODE
     vec<2> init = make_vec(node.next_real(0,500), node.next_real(0,500));
     return nbr(CALL, init, [&](field<vec<2>> prev) {
-        field<double> nbr_distances = node.nbr_dist();
         field<bool> nbr_anchor = nbr(CALL, is_anchor);
-        tuple<field<double>, field<vec<2>>, field<bool>> map = make_tuple(nbr_distances, prev, nbr_anchor);
-        auto hop_map_all = list_hood(CALL,  std::vector< tuple<double, vec<2>, bool> >{}, map);
+        tuple<field<double>, field<vec<2>>, field<bool>> map = make_tuple(nbr_dist, prev, nbr_anchor);
+        auto hop_map_all = list_hood(CALL, std::vector<tuple<double, vec<2>, bool>>{}, map);
 
         double real_distance, supposed_distance;
         double alpha = 0.1;
@@ -42,10 +46,11 @@ FUN vec<2> nBayesianCoop(ARGS, bool is_anchor){ CODE
         return searchPos;
     });
 }
-FUN_EXPORT nBayesianCoop_t = export_list<vec<2>, bool>;
+//! @brief Export list for coop.
+FUN_EXPORT nb_coop_t = export_list<vec<2>, bool>;
 
 } // namespace coordination
 
 } // namespace fcpp
 
-#endif
+#endif // COOP_H_

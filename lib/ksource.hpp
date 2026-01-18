@@ -51,4 +51,4 @@ FUN_EXPORT ksource_t = export_list<bis_ksource_broadcast_t<tuple<vec<2>, real_t>
 
 } // namespace fcpp
 
-#endif
+#endif // KSOURCE_H_
