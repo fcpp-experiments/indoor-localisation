@@ -51,6 +51,8 @@ namespace tags {
     struct ksource_hop {};
     //! @brief coop algorithm
     struct coop {};
+    //! @brief ideal reference
+    struct ideal {};
     
     //! @brief estimated position for an algorithm
     template <typename T>
@@ -77,6 +79,17 @@ GEN(A, F) void monitor_algorithm(ARGS, A, F&& fun) { CODE
     node.storage(error<A>{}) = distance(node.position(), node.storage(pos<A>{}));
     node.storage(msg_size<A>{}) = node.cur_msg_size() - msiz_pre;
 }
+//! @brief Storage list for function monitor_algorithm.
+GEN_EXPORT(A) monitor_algorithm_s = storage_list<
+    tags::pos<A>,       vec<2>,
+    tags::error<A>,     double,
+    tags::msg_size<A>,  size_t
+>;
+//! @brief Aggregator list for function monitor_algorithm.
+GEN_EXPORT(A) monitor_algorithm_a = storage_list<
+    tags::error<A>,     aggregator::mean<double>,
+    tags::msg_size<A>,  aggregator::mean<double>
+>;
 
 // @brief Main function.
 MAIN() {
@@ -125,14 +138,40 @@ MAIN() {
     monitor_algorithm(CALL, coop{}, [&](){
         return nBayesianCoop(CALL, node.storage(is_anchor{}));
     });
+    monitor_algorithm(CALL, ideal{}, [&](){
+        return node.position();
+    });
 
     // usage of node storage
     node.storage(node_size{})  = 10;
     node.storage(node_shape{}) = shape::sphere;   
 
 }
-//! @brief Export types used by the main function (update it when expanding the program).
+//! @brief Export list for the main function.
 FUN_EXPORT main_t = export_list<dv_t, ksource_t, nBayesianCoop_t>;
+//! @brief Storage list for the main function.
+FUN_EXPORT main_s = storage_list<
+    tags::debug,        std::string,
+    tags::is_anchor,    bool,
+    tags::node_color,   color,
+    tags::node_size,    double,
+    tags::node_shape,   shape,
+    monitor_algorithm_s<tags::dv_hop>,
+    monitor_algorithm_s<tags::dv_real>,
+    monitor_algorithm_s<tags::ksource_hop>,
+    monitor_algorithm_s<tags::ksource_real>,
+    monitor_algorithm_s<tags::coop>,
+    monitor_algorithm_s<tags::ideal>
+>;
+//! @brief Aggregator list for the main function.
+FUN_EXPORT main_a = storage_list<
+    monitor_algorithm_a<tags::dv_hop>,
+    monitor_algorithm_a<tags::dv_real>,
+    monitor_algorithm_a<tags::ksource_hop>,
+    monitor_algorithm_a<tags::ksource_real>,
+    monitor_algorithm_a<tags::coop>,
+    monitor_algorithm_a<tags::ideal>
+>;
 
 } // namespace coordination
 
@@ -151,6 +190,13 @@ constexpr int node_num = 100;
 //! @brief Dimensionality of the space.
 constexpr size_t dim = 2;
 
+//! @brief Plot of error over time.
+using error_plot_t = plot::plotter<coordination::main_a, plot::time, error>;
+//! @brief Plot of message size over time.
+using msize_plot_t = plot::plotter<coordination::main_a, plot::time, msg_size>;
+//! @brief Plotter class for all plots.
+using plot_t = plot::join<error_plot_t, msize_plot_t>;
+
 //! @brief Description of the round schedule.
 using round_s = sequence::periodic<
     distribution::interval_n<times_t, 0, 1>,    // uniform time in the [0,1] interval for start
@@ -162,61 +208,19 @@ using log_s = sequence::periodic_n<1, 0, 1>;
 using spawn_s = sequence::multiple_n<node_num, 0>;
 //! @brief The distribution of initial node positions (random in a 500x500 square).
 using rectangle_d = distribution::rect_n<1, 0, 0, 500, 500>;
-//! @brief The contents of the node storage as tags and associated types.
-using store_t = tuple_store<
-    debug,                      std::string,
-    node_color,                 color,
-    node_size,                  double,
-    node_shape,                 shape,
-    is_anchor,                  bool,
-    pos<dv_hop>,                vec<2>,
-    pos<dv_real>,               vec<2>,
-    pos<ksource_hop>,           vec<2>,
-    pos<ksource_real>,          vec<2>,
-    pos<coop>,                  vec<2>,
-    error<dv_hop>,              double,
-    error<dv_real>,             double,
-    error<ksource_hop>,         double,
-    error<ksource_real>,        double,
-    error<coop>,                double,
-    msg_size<dv_hop>,           size_t,
-    msg_size<dv_real>,          size_t,
-    msg_size<ksource_hop>,      size_t,
-    msg_size<ksource_real>,     size_t,
-    msg_size<coop>,             size_t
->;
-//! @brief The tags and corresponding aggregators to be logged (change as needed).
-using aggregator_t = aggregators<
-    error<dv_hop>,          aggregator::mean<double>,
-    error<dv_real>,         aggregator::mean<double>,
-    error<ksource_hop>,     aggregator::mean<double>,
-    error<ksource_real>,    aggregator::mean<double>,
-    error<coop>,            aggregator::mean<double>,
-    msg_size<dv_hop>,       aggregator::mean<double>,
-    msg_size<dv_real>,      aggregator::mean<double>,
-    msg_size<ksource_hop>,  aggregator::mean<double>,
-    msg_size<ksource_real>, aggregator::mean<double>,
-    msg_size<coop>,         aggregator::mean<double>
->;
-//! @brief Plot of error over time.
-using error_plot_t = plot::plotter<aggregator_t, plot::time, error>;
-//! @brief Plot of message size over time.
-using msize_plot_t = plot::plotter<aggregator_t, plot::time, msg_size>;
-//! @brief Plotter class for all plots.
-using plot_t = plot::join<error_plot_t, msize_plot_t>;
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
     parallel<true>,      // multithreading enabled on node rounds
     synchronised<false>, // optimise for asynchronous networks
-    program<coordination::main>,   // program to be run (refers to MAIN above)
-    exports<coordination::main_t, std::unordered_set<int, fcpp::common::hash<int>>, std::unordered_map<int, int, fcpp::common::hash<int>>, tuple<int, int>>, // export type list (types used in messages)
-    retain<metric::retain<2,1>>,   // messages are kept for 2 seconds before expiring
-    round_schedule<round_s>, // the sequence generator for round events on nodes
-    log_schedule<log_s>,     // the sequence generator for log events on the network
-    spawn_schedule<spawn_s>, // the sequence generator of node creation events on the network
-    store_t,       // the contents of the node storage
-    aggregator_t,  // the tags and corresponding aggregators to be logged
+    program<coordination::main>,        // program to be run (refers to MAIN above)
+    exports<coordination::main_t>,      // export type list (types used in messages)
+    retain<metric::retain<2,1>>,        // messages are kept for 2 seconds before expiring
+    round_schedule<round_s>,            // the sequence generator for round events on nodes
+    log_schedule<log_s>,                // the sequence generator for log events on the network
+    spawn_schedule<spawn_s>,            // the sequence generator of node creation events on the network
+    tuple_store<coordination::main_s>,  // the contents of the node storage
+    aggregators<coordination::main_a>,  // the tags and corresponding aggregators to be logged
     plot_type<plot_t>, // the plotter object
     init<
         x,      rectangle_d // initialise position randomly in a rectangle for new nodes
