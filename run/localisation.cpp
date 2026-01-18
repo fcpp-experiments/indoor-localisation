@@ -1,17 +1,14 @@
-// Copyright © 2021 Giorgio Audrito. All Rights Reserved.
+// Copyright © 2026 Giorgio Audrito and Leonardo Bertolino. All Rights Reserved.
 
 /**
- * @file exercises.cpp
- * @brief Quick-start aggregate computing exercises.
+ * @file localisation.cpp
+ * @brief TODO.
  */
 
-// [INTRODUCTION]
-//! Importing the FCPP library.
 #include "lib/fcpp.hpp"
 #include "algorithms/dvHop.hpp"
 #include "algorithms/bis_ksource_broadcast.hpp"
 #include "algorithms/non_bayesian_cooperative_loocalization.hpp"
-#include "anchor/anchorLayout.hpp"
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -31,6 +28,8 @@ namespace coordination {
 namespace tags {
     //! @brief General debugging information.
     struct debug {};
+    //! @brief is anchor or not
+    struct is_anchor {};
 
     //! @brief Color of the current node.
     struct node_color {};
@@ -38,9 +37,11 @@ namespace tags {
     struct node_size {};
     //! @brief Shape of the current node.
     struct node_shape {};
-    //! @brief is anchor or not
-    struct is_anchor {};
 
+    //! @brief ideal reference
+    struct ideal {};
+    //! @brief random reference
+    struct random {};
     //! @brief dv real algorithm
     struct dv_real {};
     //! @brief dv hop algorithm
@@ -51,9 +52,7 @@ namespace tags {
     struct ksource_hop {};
     //! @brief coop algorithm
     struct coop {};
-    //! @brief ideal reference
-    struct ideal {};
-    
+
     //! @brief estimated position for an algorithm
     template <typename T>
     struct pos {};
@@ -66,9 +65,6 @@ namespace tags {
     template <typename T>
     struct msg_size {};
 }
-
-//! @brief The maximum communication range between nodes.
-constexpr size_t communication_range = 100;
 
 
 //! @brief Runs an algorithm and saves monitoring data.
@@ -91,37 +87,11 @@ GEN_EXPORT(A) monitor_algorithm_a = storage_list<
     tags::msg_size<A>,  aggregator::mean<double>
 >;
 
+
 // @brief Main function.
 MAIN() {
     // import tag names in the local scope.
     using namespace tags;
-    
-    // GRIGLIA or PERIMETRO
-    AnchorLayout anchor_layout = PERIMETRO;
-
-    double side = 500.0;
-    double step = 100.0;
-    int rows = 4;
-    int cols = 5;
-    int total_anchors = rows * cols;
-
-    if (node.uid < total_anchors) {
-        node.position() = positionAnchor(
-            CALL,
-            node.uid,
-            anchor_layout,
-            side, 
-            step, 
-            rows,
-            cols
-        );
-        node.storage(is_anchor{}) = true;
-        node.storage(node_color{}) = color(RED);
-
-    } else {
-        node.storage(is_anchor{}) = false;
-        node.storage(node_color{}) = color(GREEN);
-    }
 
     monitor_algorithm(CALL, dv_hop{}, [&](){
         return dv(CALL, node.storage(is_anchor{}), 1, 0);
@@ -141,11 +111,14 @@ MAIN() {
     monitor_algorithm(CALL, ideal{}, [&](){
         return node.position();
     });
+    monitor_algorithm(CALL, random{}, [&](){
+        return make_vec(node.next_real(0,500), node.next_real(0,500));
+    });
 
     // usage of node storage
-    node.storage(node_size{})  = 10;
-    node.storage(node_shape{}) = shape::sphere;   
-
+    node.storage(node_size{})  = node.storage(is_anchor{}) ? 12 : 8;
+    node.storage(node_shape{}) = node.storage(is_anchor{}) ? shape::cube : shape::sphere;
+    node.storage(node_color{}) = node.storage(is_anchor{}) ? color(RED) : color(GREEN);
 }
 //! @brief Export list for the main function.
 FUN_EXPORT main_t = export_list<dv_t, ksource_t, nBayesianCoop_t>;
@@ -156,26 +129,29 @@ FUN_EXPORT main_s = storage_list<
     tags::node_color,   color,
     tags::node_size,    double,
     tags::node_shape,   shape,
+    monitor_algorithm_s<tags::ideal>,
+    monitor_algorithm_s<tags::random>,
     monitor_algorithm_s<tags::dv_hop>,
     monitor_algorithm_s<tags::dv_real>,
     monitor_algorithm_s<tags::ksource_hop>,
     monitor_algorithm_s<tags::ksource_real>,
-    monitor_algorithm_s<tags::coop>,
-    monitor_algorithm_s<tags::ideal>
+    monitor_algorithm_s<tags::coop>
 >;
 //! @brief Aggregator list for the main function.
 FUN_EXPORT main_a = storage_list<
+    monitor_algorithm_a<tags::ideal>,
+    monitor_algorithm_a<tags::random>,
     monitor_algorithm_a<tags::dv_hop>,
     monitor_algorithm_a<tags::dv_real>,
     monitor_algorithm_a<tags::ksource_hop>,
     monitor_algorithm_a<tags::ksource_real>,
-    monitor_algorithm_a<tags::coop>,
-    monitor_algorithm_a<tags::ideal>
+    monitor_algorithm_a<tags::coop>
 >;
 
 } // namespace coordination
 
-// [SYSTEM SETUP]
+
+// SYSTEM SETUP
 
 //! @brief Namespace for component options.
 namespace option {
@@ -184,11 +160,6 @@ namespace option {
 using namespace component::tags;
 //! @brief Import tags used by aggregate functions.
 using namespace coordination::tags;
-
-//! @brief Number of people in the area.
-constexpr int node_num = 100;
-//! @brief Dimensionality of the space.
-constexpr size_t dim = 2;
 
 //! @brief Plot of error over time.
 using error_plot_t = plot::plotter<coordination::main_a, plot::time, error>;
@@ -204,32 +175,47 @@ using round_s = sequence::periodic<
 >;
 //! @brief The sequence of network snapshots (one every simulated second).
 using log_s = sequence::periodic_n<1, 0, 1>;
-//! @brief The sequence of node generation events (node_num devices all generated at time 0).
-using spawn_s = sequence::multiple_n<node_num, 0>;
-//! @brief The distribution of initial node positions (random in a 500x500 square).
-using rectangle_d = distribution::rect_n<1, 0, 0, 500, 500>;
+
+//! @brief The connection predicate (100% at 0m, 50% at 80m, 0% at 100m).
+using connect_t = connect::radial<80, connect::fixed<100>>;
+
+//! @brief The sequence of anchor generation events (20 devices all generated at time 0).
+using anchor_spawn_s = sequence::multiple_n<20, 0>;
+//! @brief The distribution of initial anchor positions (random in a 500x500 square).
+using anchor_pos_d = sequence::rectangle_n<1, 0, 0, 500, 500, 20>;
+//! @brief The sequence of device generation events (100 devices all generated at time 0).
+using device_spawn_s = sequence::multiple_n<100, 0>;
+//! @brief The distribution of initial device positions (random in a 500x500 square).
+using device_pos_d = distribution::rect_n<1, 0, 0, 500, 500>;
 
 //! @brief The general simulation options.
 DECLARE_OPTIONS(list,
     parallel<true>,      // multithreading enabled on node rounds
     synchronised<false>, // optimise for asynchronous networks
-    program<coordination::main>,        // program to be run (refers to MAIN above)
-    exports<coordination::main_t>,      // export type list (types used in messages)
-    retain<metric::retain<2,1>>,        // messages are kept for 2 seconds before expiring
-    round_schedule<round_s>,            // the sequence generator for round events on nodes
-    log_schedule<log_s>,                // the sequence generator for log events on the network
-    spawn_schedule<spawn_s>,            // the sequence generator of node creation events on the network
-    tuple_store<coordination::main_s>,  // the contents of the node storage
-    aggregators<coordination::main_a>,  // the tags and corresponding aggregators to be logged
-    plot_type<plot_t>, // the plotter object
+    program<coordination::main>,            // program to be run (refers to MAIN above)
+    exports<coordination::main_t>,          // export type list (types used in messages)
+    tuple_store<coordination::main_s>,      // the contents of the node storage
+    aggregators<coordination::main_a>,      // the tags and corresponding aggregators to be logged
+    plot_type<plot_t>,                      // the plotter object
+    //connector<connect_t>,                 // connection predicate
+    connector<connect::fixed<100>>,         // connection allowed within a fixed comm range
+    retain<metric::retain<5,1>>,            // messages are kept for 5 seconds before expiring
+    round_schedule<round_s>,                // the sequence generator for round events on nodes
+    log_schedule<log_s>,                    // the sequence generator for log events on the network
+    spawn_schedule<anchor_spawn_s>,         // the sequence generator of anchor creation events on the network
     init<
-        x,      rectangle_d // initialise position randomly in a rectangle for new nodes
+        is_anchor,  distribution::constant_n<bool, true>,
+        x,          anchor_pos_d
     >,
-    dimension<dim>, // dimensionality of the space
-    connector<connect::fixed<100, 1, dim>>, // connection allowed within a fixed comm range
-    shape_tag<node_shape>, // the shape of a node is read from this tag in the store
-    size_tag<node_size>,   // the size  of a node is read from this tag in the store
-    color_tag<node_color>  // the color of a node is read from this tag in the store
+    spawn_schedule<device_spawn_s>,         // the sequence generator of device creation events on the network
+    init<
+        is_anchor,  distribution::constant_n<bool, false>,
+        x,          device_pos_d
+    >,
+    dimension<2>,           // dimensionality of the space
+    shape_tag<node_shape>,  // the shape of a node is read from this tag in the store
+    size_tag<node_size>,    // the size  of a node is read from this tag in the store
+    color_tag<node_color>   // the color of a node is read from this tag in the store
 );
 
 } // namespace option
@@ -247,7 +233,7 @@ int main() {
         //! @brief The network object type (interactive simulator with given options).
         using net_t = component::interactive_simulator<option::list>::net;
         //! @brief The initialisation values (simulation name).
-        auto init_v = common::make_tagged_tuple<option::name, option::plotter>("Exercises", &p);
+        auto init_v = common::make_tagged_tuple<option::name, option::plotter>("Cooperative Indoor Localisation", &p);
         //! @brief Construct the network object.
         net_t network{init_v};
         //! @brief Run the simulation until exit.
