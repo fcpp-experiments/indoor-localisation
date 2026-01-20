@@ -19,8 +19,6 @@ namespace coordination {
 FUN vec<2> dv(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){ CODE
     std::unordered_map<device_t,real_t> anchor_distance_map;
     std::unordered_map<device_t,vec<2>> anchor_pos_map;
-    common::option<device_t> my_anchor_keys;
-    if (is_anchor) my_anchor_keys = node.uid;
 
     old(CALL, 1.0, [&](real_t correction){
         auto hop_map_all = spawn(CALL, [&](device_t anchor_id){
@@ -29,7 +27,7 @@ FUN vec<2> dv(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){ 
             });
             auto t = broadcast(CALL, dist, make_tuple(node.position(), correction));
             return make_tuple(make_tuple(dist, t), true);
-        }, my_anchor_keys);
+        }, is_anchor ? common::option<device_t>{node.uid} : common::option<device_t>{});
         real_t apx_dist = 0;
         real_t true_dist = 0;
         for (auto const& [id, t] : hop_map_all) {

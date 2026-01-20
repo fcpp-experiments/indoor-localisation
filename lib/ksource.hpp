@@ -15,12 +15,12 @@ namespace fcpp {
 namespace coordination {
 
 //! @brief Estimates the node position by multilateration with the 20 closest anchors.
-FUN vec<2> ksource(ARGS, bool is_anchor, field<real_t> nbr_dist, real_t info_speed) { CODE
+FUN vec<2> ksource(ARGS, int k, bool is_anchor, field<real_t> nbr_dist, real_t info_speed) { CODE
     std::unordered_map<device_t,real_t> anchor_distance_map;
     std::unordered_map<device_t,vec<2>> anchor_pos_map;
 
     old(CALL, 1.0, [&](real_t correction){
-        auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), 6, 1, info_speed, [&](){
+        auto hop_map_all = bis_ksource_broadcast(CALL, is_anchor, make_tuple(node.position(), correction), k, 1, info_speed, [&](){
             return nbr_dist;
         });
         real_t apx_dist = 0;
