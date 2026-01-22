@@ -2,7 +2,7 @@
 
 /**
  * @file graphic.cpp
- * @brief Runs a single execution of the cooperative indoor localisation case study with a graphical user interface.
+ * @brief Runs a single execution of the aggregate indoor localisation case study with a graphical user interface.
  */
 
 #include "lib/localisation.hpp"

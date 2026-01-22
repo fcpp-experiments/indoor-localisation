@@ -2,7 +2,7 @@
 
 /**
  * @file batch.cpp
- * @brief Runs a batch of executions of the cooperative indoor localisation case study.
+ * @brief Runs a batch of executions of the aggregate indoor localisation case study.
  */
 
 #include "lib/localisation.hpp"

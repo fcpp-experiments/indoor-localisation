@@ -2,7 +2,7 @@
 
 /**
  * @file localisation.cpp
- * @brief Cooperative indoor localisation case study.
+ * @brief Aggregate indoor localisation case study.
  */
 
 #ifndef LOCALISATION_H_
@@ -10,7 +10,6 @@
 
 #include "lib/fcpp.hpp"
 #include "lib/dv.hpp"
-#include "lib/ksource.hpp"
 #include "lib/coop.hpp"
 
 /**
@@ -49,17 +48,13 @@ namespace tags {
     struct node_shape {};
 
     //! @brief dv real algorithm
-    struct dv_real {};
+    struct dv_all_real {};
     //! @brief dv hop algorithm
-    struct dv_hop {};
+    struct dv_all_hop {};
     //! @brief ksource real algorithm
-    struct ksource12_real {};
+    struct dv_6close_real {};
     //! @brief ksource hop algorithm
-    struct ksource12_hop {};
-    //! @brief ksource real algorithm
-    struct ksource6_real {};
-    //! @brief ksource hop algorithm
-    struct ksource6_hop {};
+    struct dv_6close_hop {};
     //! @brief nbcoop real algorithm
     struct nbcoop_real {};
     //! @brief mlcoop real algorithm
@@ -122,24 +117,18 @@ MAIN() {
     // initial random position
     vec<2> init = make_vec(node.next_real(0,500), node.next_real(0,500));
 
-    monitor_algorithm(CALL, dv_real{}, [&](){
-        return dv(CALL, init, node.storage(is_anchor{}), nbr_dist, 80, 1000);
+    monitor_algorithm(CALL, dv_all_real{}, [&](){
+        return dv_all(CALL, init, node.storage(is_anchor{}), nbr_dist, 80, 1000);
     });
-    monitor_algorithm(CALL, dv_hop{}, [&](){
+    monitor_algorithm(CALL, dv_all_hop{}, [&](){
         int max_dist = 150000 / (node.net.storage(component::tags::half_radius{})*node.net.storage(component::tags::radius{}));
-        return dv(CALL, init, node.storage(is_anchor{}), 1, 1, max_dist);
+        return dv_all(CALL, init, node.storage(is_anchor{}), 1, 1, max_dist);
     });
-    monitor_algorithm(CALL, ksource12_real{}, [&](){
-        return ksource(CALL, 12, init, node.storage(is_anchor{}), nbr_dist, 80);
+    monitor_algorithm(CALL, dv_6close_real{}, [&](){
+        return dv_kclose(CALL, 6, init, node.storage(is_anchor{}), nbr_dist, 80);
     });
-    monitor_algorithm(CALL, ksource12_hop{}, [&](){
-        return ksource(CALL, 12, init, node.storage(is_anchor{}), 1, 1);
-    });
-    monitor_algorithm(CALL, ksource6_real{}, [&](){
-        return ksource(CALL, 6, init, node.storage(is_anchor{}), nbr_dist, 80);
-    });
-    monitor_algorithm(CALL, ksource6_hop{}, [&](){
-        return ksource(CALL, 6, init, node.storage(is_anchor{}), 1, 1);
+    monitor_algorithm(CALL, dv_6close_hop{}, [&](){
+        return dv_kclose(CALL, 6, init, node.storage(is_anchor{}), 1, 1);
     });
     monitor_algorithm(CALL, nbcoop_real{}, [&](){
         return nb_coop(CALL, init, node.storage(is_anchor{}), nbr_dist);
@@ -147,13 +136,15 @@ MAIN() {
     monitor_algorithm(CALL, mlcoop_real{}, [&](){
         return ml_coop(CALL, init, node.storage(is_anchor{}), nbr_dist);
     });
+    /*
     monitor_algorithm(CALL, wmlcoop_real{}, [&](){
         real_t aw = 15000 / (node.net.storage(tags::variance{})*node.net.storage(component::tags::half_radius{})*node.net.storage(component::tags::radius{}));
         return wml_coop(CALL, init, node.storage(is_anchor{}), nbr_dist, aw, 0.005);
     });
+    */
 }
 //! @brief Export list for the main function.
-FUN_EXPORT main_t = export_list<dv_t, ksource_t, nb_coop_t, ml_coop_t, wml_coop_t>;
+FUN_EXPORT main_t = export_list<dv_all_t, dv_kclose_t, nb_coop_t, ml_coop_t, wml_coop_t>;
 //! @brief Storage list for the main function.
 FUN_EXPORT main_s = storage_list<
     tags::debug,        std::string,
@@ -162,27 +153,21 @@ FUN_EXPORT main_s = storage_list<
     tags::node_color,   color,
     tags::node_size,    double,
     tags::node_shape,   shape,
-    monitor_algorithm_s<tags::dv_real>,
-    monitor_algorithm_s<tags::dv_hop>,
-    monitor_algorithm_s<tags::ksource12_real>,
-    monitor_algorithm_s<tags::ksource12_hop>,
-    monitor_algorithm_s<tags::ksource6_real>,
-    monitor_algorithm_s<tags::ksource6_hop>,
+    monitor_algorithm_s<tags::dv_all_real>,
+    monitor_algorithm_s<tags::dv_all_hop>,
+    monitor_algorithm_s<tags::dv_6close_real>,
+    monitor_algorithm_s<tags::dv_6close_hop>,
     monitor_algorithm_s<tags::nbcoop_real>,
-    monitor_algorithm_s<tags::mlcoop_real>,
-    monitor_algorithm_s<tags::wmlcoop_real>
+    monitor_algorithm_s<tags::mlcoop_real>
 >;
 //! @brief Aggregator list for the main function.
 FUN_EXPORT main_a = storage_list<
-    monitor_algorithm_a<tags::dv_real>,
-    monitor_algorithm_a<tags::dv_hop>,
-    monitor_algorithm_a<tags::ksource12_real>,
-    monitor_algorithm_a<tags::ksource12_hop>,
-    monitor_algorithm_a<tags::ksource6_real>,
-    monitor_algorithm_a<tags::ksource6_hop>,
+    monitor_algorithm_a<tags::dv_all_real>,
+    monitor_algorithm_a<tags::dv_all_hop>,
+    monitor_algorithm_a<tags::dv_6close_real>,
+    monitor_algorithm_a<tags::dv_6close_hop>,
     monitor_algorithm_a<tags::nbcoop_real>,
-    monitor_algorithm_a<tags::mlcoop_real>,
-    monitor_algorithm_a<tags::wmlcoop_real>
+    monitor_algorithm_a<tags::mlcoop_real>
 >;
 
 } // namespace coordination
@@ -206,7 +191,7 @@ template<typename X, template<class> class Y, typename... Fs>
 using general_plot = plot::filter<Fs..., plot::plotter<coordination::main_a, X, Y>>;
 
 //! @brief The simulation time after which we measure performance.
-constexpr size_t half_time = 2*bad_time;
+constexpr size_t mean_time = 0;
 //! @brief The default variance simulation parameter.
 constexpr size_t def_var = 20;
 //! @brief The default half-radius simulation parameter.
@@ -218,13 +203,13 @@ using error_time_plot = general_plot<plot::time, error,    half_radius, filter::
 //! @brief Plot of message size over time.
 using msize_time_plot = general_plot<plot::time, msg_size, half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>>;
 //! @brief Plot of error over variance.
-using error_var_plot = general_plot<variance, error,    plot::time, filter::above<half_time>, radius, filter::equal<def_rad>>;
+using error_var_plot = general_plot<variance, error,    plot::time, filter::above<mean_time>, radius, filter::equal<def_rad>>;
 //! @brief Plot of message size over variance.
-using msize_var_plot = general_plot<variance, msg_size, plot::time, filter::above<half_time>, radius, filter::equal<def_rad>>;
+using msize_var_plot = general_plot<variance, msg_size, plot::time, filter::above<mean_time>, radius, filter::equal<def_rad>>;
 //! @brief Plot of error over radius.
-using error_rad_plot = general_plot<radius, error,    plot::time, filter::above<half_time>, half_radius, filter::equal<100-def_var>>;
+using error_rad_plot = general_plot<radius, error,    plot::time, filter::above<mean_time>, half_radius, filter::equal<100-def_var>>;
 //! @brief Plot of message size over radius.
-using msize_rad_plot = general_plot<radius, msg_size, plot::time, filter::above<half_time>, half_radius, filter::equal<100-def_var>>;
+using msize_rad_plot = general_plot<radius, msg_size, plot::time, filter::above<mean_time>, half_radius, filter::equal<100-def_var>>;
 //! @brief Plotter class for all batch plots.
 using batch_plot = plot::join<error_time_plot, msize_time_plot, error_var_plot, msize_var_plot, error_rad_plot, msize_rad_plot>;
 

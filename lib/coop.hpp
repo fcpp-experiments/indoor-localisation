@@ -36,6 +36,7 @@ FUN vec<2> nb_coop(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist){ C
 //! @brief Export list for coop.
 FUN_EXPORT nb_coop_t = export_list<vec<2>>;
 
+
 //! @brief Cooperative localization based on multilateration.
 FUN vec<2> ml_coop(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist){ CODE
     return nbr(CALL, init, [&](field<vec<2>> nbr_pos) {
@@ -46,6 +47,7 @@ FUN vec<2> ml_coop(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist){ C
 }
 //! @brief Export list for ml_coop.
 FUN_EXPORT ml_coop_t = export_list<vec<2>>;
+
 
 /**
  * @brief Cooperative localization based on weighted multilateration.

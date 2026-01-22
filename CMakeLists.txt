@@ -11,7 +11,7 @@ fcpp_setup()
 project(
     localisation
     VERSION 0.0.0
-    DESCRIPTION "Cooperative indoor localisation case study."
+    DESCRIPTION "Aggregate indoor localisation case study."
 )
 
 # target declaration
