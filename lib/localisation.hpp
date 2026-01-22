@@ -102,27 +102,28 @@ MAIN() {
     field<real_t> nbr_dist = map_hood([&](real_t d){
         return d * node.storage(random{})(node.generator());
     }, node.nbr_dist());
+    vec<2> init = make_vec(node.next_real(0,500), node.next_real(0,500));
 
     monitor_algorithm(CALL, dv_real{}, [&](){
-        return dv(CALL, node.storage(is_anchor{}), nbr_dist, 80);
+        return dv(CALL, init, node.storage(is_anchor{}), nbr_dist, 80);
     });
     monitor_algorithm(CALL, dv_hop{}, [&](){
-        return dv(CALL, node.storage(is_anchor{}), 1, 0);
+        return dv(CALL, init, node.storage(is_anchor{}), 1, 0);
     });
     monitor_algorithm(CALL, ksource12_real{}, [&](){
-        return ksource(CALL, 12, node.storage(is_anchor{}), nbr_dist, 80);
+        return ksource(CALL, 12, init, node.storage(is_anchor{}), nbr_dist, 80);
     });
     monitor_algorithm(CALL, ksource12_hop{}, [&](){
-        return ksource(CALL, 12, node.storage(is_anchor{}), 1, 0);
+        return ksource(CALL, 12, init, node.storage(is_anchor{}), 1, 0);
     });
     monitor_algorithm(CALL, ksource6_real{}, [&](){
-        return ksource(CALL, 6, node.storage(is_anchor{}), nbr_dist, 80);
+        return ksource(CALL, 6, init, node.storage(is_anchor{}), nbr_dist, 80);
     });
     monitor_algorithm(CALL, ksource6_hop{}, [&](){
-        return ksource(CALL, 6, node.storage(is_anchor{}), 1, 0);
+        return ksource(CALL, 6, init, node.storage(is_anchor{}), 1, 0);
     });
     monitor_algorithm(CALL, coop_real{}, [&](){
-        return nb_coop(CALL, node.storage(is_anchor{}), nbr_dist);
+        return nb_coop(CALL, init, node.storage(is_anchor{}), nbr_dist);
     });
 
     // usage of node storage
@@ -172,15 +173,41 @@ using namespace component::tags;
 //! @brief Import tags used by aggregate functions.
 using namespace coordination::tags;
 
-//! @brief Plot of error over time.
-using error_plot_t = plot::plotter<coordination::main_a, plot::time, error>;
-//! @brief Plot of message size over time.
-using msize_plot_t = plot::plotter<coordination::main_a, plot::time, msg_size>;
-//! @brief Plotter class for all plots.
-using plot_t = plot::join<error_plot_t, msize_plot_t>;
-
 //! @brief End of simulated time.
 constexpr size_t end_time = 100;
+
+//! @brief Generic plot given X axis, Y axis and filter description Fs
+template<typename X, template<class> class Y, typename... Fs>
+using general_plot = plot::filter<Fs..., plot::plotter<coordination::main_a, X, Y>>;
+
+//! @brief Half of the simulation time.
+constexpr size_t half_time = end_time / 2;
+//! @brief The default variance simulation parameter.
+constexpr size_t def_var = 20;
+//! @brief The default radius simulation parameter.
+constexpr size_t def_rad = 100;
+//! @brief Plot of error over time.
+using error_time_plot = general_plot<plot::time, error,    half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>>;
+//! @brief Plot of message size over time.
+using msize_time_plot = general_plot<plot::time, msg_size, half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>>;
+//! @brief Plot of error over variance.
+using error_var_plot = general_plot<variance, error,    plot::time, filter::above<half_time>, radius, filter::equal<def_rad>>;
+//! @brief Plot of message size over variance.
+using msize_var_plot = general_plot<variance, msg_size, plot::time, filter::above<half_time>, radius, filter::equal<def_rad>>;
+//! @brief Plot of error over radius.
+using error_rad_plot = general_plot<radius, error,    plot::time, filter::above<half_time>, half_radius, filter::equal<100-def_var>>;
+//! @brief Plot of message size over radius.
+using msize_rad_plot = general_plot<radius, msg_size, plot::time, filter::above<half_time>, half_radius, filter::equal<100-def_var>>;
+//! @brief Plotter class for all batch plots.
+using batch_plot = plot::join<error_time_plot, msize_time_plot, error_var_plot, msize_var_plot, error_rad_plot, msize_rad_plot>;
+
+//! @brief Plot of error over time.
+using error_plot = general_plot<plot::time, error>;
+//! @brief Plot of message size over time.
+using msize_plot = general_plot<plot::time, msg_size>;
+//! @brief Plotter class for all GUI plots.
+using gui_plot = plot::join<error_plot, msize_plot>;
+
 //! @brief Description of the round schedule.
 using round_s = sequence::periodic<
     distribution::interval_n<times_t, 0, 1>,        // uniform time in the [0,1] interval for start
@@ -206,6 +233,7 @@ using device_spawn_s = sequence::multiple_n<100, 0>;
 using device_pos_d = distribution::rect_n<1, 0, 0, 500, 500>;
 
 //! @brief The general simulation options.
+template <bool batch>
 DECLARE_OPTIONS(list,
     parallel<true>,      // multithreading enabled on node rounds
     synchronised<false>, // optimise for asynchronous networks
@@ -213,7 +241,14 @@ DECLARE_OPTIONS(list,
     exports<coordination::main_t>,          // export type list (types used in messages)
     node_store<coordination::main_s>,       // the contents of the node storage
     aggregators<coordination::main_a>,      // the tags and corresponding aggregators to be logged
-    plot_type<plot_t>,                      // the plotter object
+    extra_info<                             // general parameters to use for plotting
+        variance,       real_t,
+        half_radius,    size_t,
+        radius,         size_t
+    >,
+    plot_type<                              // the plotter object
+        std::conditional_t<batch, batch_plot, gui_plot>
+    >,
     connector<connect_t>,                   // connection predicate
     retain<metric::retain<5,1>>,            // messages are kept for 5 seconds before expiring
     round_schedule<round_s>,                // the sequence generator for round events on nodes

@@ -13,8 +13,7 @@ namespace fcpp {
 namespace coordination {
 
 //! @brief Non-bayesian cooperative localization.
-FUN vec<2> nb_coop(ARGS, bool is_anchor, field<real_t> nbr_dist){ CODE
-    vec<2> init = make_vec(node.next_real(0,500), node.next_real(0,500));
+FUN vec<2> nb_coop(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist){ CODE
     return nbr(CALL, init, [&](field<vec<2>> nbr_pos) {
         auto nbr_pos_dist = list_hood(CALL, std::vector<tuple<vec<2>, double>>{}, make_tuple(nbr_pos, nbr_dist));
         if (is_anchor) return node.position();

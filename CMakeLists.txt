@@ -16,3 +16,4 @@ project(
 
 # target declaration
 fcpp_target(./run/graphic.cpp ON)
+fcpp_target(./run/batch.cpp  OFF)
