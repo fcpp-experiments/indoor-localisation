@@ -16,7 +16,7 @@ namespace fcpp {
 namespace coordination {
 
 //! @brief Estimates the node position by multilateration with every other anchor.
-FUN vec<2> dv(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist, real_t info_speed){ CODE
+FUN vec<2> dv(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist, real_t info_speed, int max_dist){ CODE
     std::vector<tuple<vec<2>,real_t>> anchors;
 
     return old(CALL, init, [&](vec<2> pos){
@@ -26,7 +26,7 @@ FUN vec<2> dv(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist, real_t 
                     return nbr_dist;
                 });
                 auto t = broadcast(CALL, dist, make_tuple(node.position(), correction));
-                return make_tuple(make_tuple(dist, t), true);
+                return make_tuple(make_tuple(dist, t), dist < max_dist);
             }, is_anchor ? common::option<device_t>{node.uid} : common::option<device_t>{});
             real_t apx_dist = 0;
             real_t true_dist = 0;

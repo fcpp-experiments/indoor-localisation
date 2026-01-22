@@ -19,9 +19,9 @@ int main() {
     using comp_t = component::batch_simulator<option::list<true>>;
     // The list of initialisation values to be used for simulations.
     auto init_list = batch::make_tagged_tuple_sequence(
-        batch::arithmetic<option::seed>(0, 100, 1),             // 10 different random seeds
-        batch::arithmetic<option::half_radius>(50, 98, 2, 80),  // 26 different variances
-        batch::arithmetic<option::radius>(50, 300, 10, 100),    // 26 different communication radiuses
+        batch::arithmetic<option::seed       >( 0, 100,  1),                        // 10 different random seeds
+        batch::arithmetic<option::half_radius>(50,  98,  2, (int)option::def_hr),   // 26 different variances
+        batch::arithmetic<option::radius     >(50, 300, 10, (int)option::def_rad),  // 26 different communication radiuses
         // generate output file name for the run
         batch::stringify<option::output>("output/batch", "txt"),
         // computes half radius from variance

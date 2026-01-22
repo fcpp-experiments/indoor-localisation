@@ -18,6 +18,9 @@
  */
 namespace fcpp {
 
+//! @brief The time at which part of the devices are dead.
+constexpr size_t bad_time = 50;
+
 //! @brief Dummy ordering between positions (allows positions to be used as secondary keys in ordered tuples).
 template <size_t n>
 bool operator<(vec<n> const&, vec<n> const&) {
@@ -57,8 +60,12 @@ namespace tags {
     struct ksource6_real {};
     //! @brief ksource hop algorithm
     struct ksource6_hop {};
-    //! @brief coop algorithm
-    struct coop_real {};
+    //! @brief nbcoop real algorithm
+    struct nbcoop_real {};
+    //! @brief mlcoop real algorithm
+    struct mlcoop_real {};
+    //! @brief wmlcoop real algorithm
+    struct wmlcoop_real {};
 
     //! @brief estimated position for an algorithm
     template <typename T>
@@ -99,40 +106,54 @@ GEN_EXPORT(A) monitor_algorithm_a = storage_list<
 MAIN() {
     // import tag names in the local scope.
     using namespace tags;
+    // usage of node storage
+    node.storage(node_size{})  = node.storage(is_anchor{}) ? 12 : 8;
+    node.storage(node_shape{}) = node.storage(is_anchor{}) ? shape::cube : shape::sphere;
+    node.storage(node_color{}) = color(GREEN);
+    // 1/4 of the nodes are down between times bad_time and 2*bad_time
+    if (node.uid % 4 == 0 and node.current_time() > bad_time and node.next_time() < 2*bad_time) {
+        node.storage(node_color{}) = color(RED);
+        return;
+    }
+    // distances with error
     field<real_t> nbr_dist = map_hood([&](real_t d){
         return d * node.storage(random{})(node.generator());
     }, node.nbr_dist());
+    // initial random position
     vec<2> init = make_vec(node.next_real(0,500), node.next_real(0,500));
 
     monitor_algorithm(CALL, dv_real{}, [&](){
-        return dv(CALL, init, node.storage(is_anchor{}), nbr_dist, 80);
+        return dv(CALL, init, node.storage(is_anchor{}), nbr_dist, 80, 1000);
     });
     monitor_algorithm(CALL, dv_hop{}, [&](){
-        return dv(CALL, init, node.storage(is_anchor{}), 1, 0);
+        int max_dist = 150000 / (node.net.storage(component::tags::half_radius{})*node.net.storage(component::tags::radius{}));
+        return dv(CALL, init, node.storage(is_anchor{}), 1, 1, max_dist);
     });
     monitor_algorithm(CALL, ksource12_real{}, [&](){
         return ksource(CALL, 12, init, node.storage(is_anchor{}), nbr_dist, 80);
     });
     monitor_algorithm(CALL, ksource12_hop{}, [&](){
-        return ksource(CALL, 12, init, node.storage(is_anchor{}), 1, 0);
+        return ksource(CALL, 12, init, node.storage(is_anchor{}), 1, 1);
     });
     monitor_algorithm(CALL, ksource6_real{}, [&](){
         return ksource(CALL, 6, init, node.storage(is_anchor{}), nbr_dist, 80);
     });
     monitor_algorithm(CALL, ksource6_hop{}, [&](){
-        return ksource(CALL, 6, init, node.storage(is_anchor{}), 1, 0);
+        return ksource(CALL, 6, init, node.storage(is_anchor{}), 1, 1);
     });
-    monitor_algorithm(CALL, coop_real{}, [&](){
+    monitor_algorithm(CALL, nbcoop_real{}, [&](){
         return nb_coop(CALL, init, node.storage(is_anchor{}), nbr_dist);
     });
-
-    // usage of node storage
-    node.storage(node_size{})  = node.storage(is_anchor{}) ? 12 : 8;
-    node.storage(node_shape{}) = node.storage(is_anchor{}) ? shape::cube : shape::sphere;
-    node.storage(node_color{}) = node.storage(is_anchor{}) ? color(RED) : color(GREEN);
+    monitor_algorithm(CALL, mlcoop_real{}, [&](){
+        return ml_coop(CALL, init, node.storage(is_anchor{}), nbr_dist);
+    });
+    monitor_algorithm(CALL, wmlcoop_real{}, [&](){
+        real_t aw = 15000 / (node.net.storage(tags::variance{})*node.net.storage(component::tags::half_radius{})*node.net.storage(component::tags::radius{}));
+        return wml_coop(CALL, init, node.storage(is_anchor{}), nbr_dist, aw, 0.005);
+    });
 }
 //! @brief Export list for the main function.
-FUN_EXPORT main_t = export_list<dv_t, ksource_t, nb_coop_t>;
+FUN_EXPORT main_t = export_list<dv_t, ksource_t, nb_coop_t, ml_coop_t, wml_coop_t>;
 //! @brief Storage list for the main function.
 FUN_EXPORT main_s = storage_list<
     tags::debug,        std::string,
@@ -147,7 +168,9 @@ FUN_EXPORT main_s = storage_list<
     monitor_algorithm_s<tags::ksource12_hop>,
     monitor_algorithm_s<tags::ksource6_real>,
     monitor_algorithm_s<tags::ksource6_hop>,
-    monitor_algorithm_s<tags::coop_real>
+    monitor_algorithm_s<tags::nbcoop_real>,
+    monitor_algorithm_s<tags::mlcoop_real>,
+    monitor_algorithm_s<tags::wmlcoop_real>
 >;
 //! @brief Aggregator list for the main function.
 FUN_EXPORT main_a = storage_list<
@@ -157,7 +180,9 @@ FUN_EXPORT main_a = storage_list<
     monitor_algorithm_a<tags::ksource12_hop>,
     monitor_algorithm_a<tags::ksource6_real>,
     monitor_algorithm_a<tags::ksource6_hop>,
-    monitor_algorithm_a<tags::coop_real>
+    monitor_algorithm_a<tags::nbcoop_real>,
+    monitor_algorithm_a<tags::mlcoop_real>,
+    monitor_algorithm_a<tags::wmlcoop_real>
 >;
 
 } // namespace coordination
@@ -174,18 +199,20 @@ using namespace component::tags;
 using namespace coordination::tags;
 
 //! @brief End of simulated time.
-constexpr size_t end_time = 100;
+constexpr size_t end_time = 3*bad_time;
 
 //! @brief Generic plot given X axis, Y axis and filter description Fs
 template<typename X, template<class> class Y, typename... Fs>
 using general_plot = plot::filter<Fs..., plot::plotter<coordination::main_a, X, Y>>;
 
-//! @brief Half of the simulation time.
-constexpr size_t half_time = end_time / 2;
+//! @brief The simulation time after which we measure performance.
+constexpr size_t half_time = 2*bad_time;
 //! @brief The default variance simulation parameter.
 constexpr size_t def_var = 20;
+//! @brief The default half-radius simulation parameter.
+constexpr size_t def_hr = 100 - def_var;
 //! @brief The default radius simulation parameter.
-constexpr size_t def_rad = 100;
+constexpr size_t def_rad = 150;
 //! @brief Plot of error over time.
 using error_time_plot = general_plot<plot::time, error,    half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>>;
 //! @brief Plot of message size over time.
@@ -240,6 +267,11 @@ DECLARE_OPTIONS(list,
     program<coordination::main>,            // program to be run (refers to MAIN above)
     exports<coordination::main_t>,          // export type list (types used in messages)
     node_store<coordination::main_s>,       // the contents of the node storage
+    net_store<                              // the contents of the net storage
+        variance,       real_t,
+        half_radius,    size_t,
+        radius,         size_t
+    >,
     aggregators<coordination::main_a>,      // the tags and corresponding aggregators to be logged
     extra_info<                             // general parameters to use for plotting
         variance,       real_t,

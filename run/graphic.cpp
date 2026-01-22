@@ -18,8 +18,8 @@ int main(int argc, char *argv[]) {
     std::cout << "/*\n";
     {
         // Calculate simulation parameters.
-        real_t comm_radius = 100;
-        real_t variance = 0.2;
+        real_t comm_radius = option::def_rad;
+        real_t variance = option::def_var / 100.0;
         if (argc == 3) {
             comm_radius = std::atof(argv[1]);
             variance = std::atof(argv[2]);
