@@ -32,6 +32,7 @@ FUN vec<2> dv_all(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist, rea
             real_t true_dist = 0;
             for (auto const& t : anchor_map) {
                 real_t dist = get<0>(t.second);
+                if (not std::isfinite(dist)) continue;
                 vec<2> pos = get<0>(get<1>(t.second));
                 real_t corr = get<1>(get<1>(t.second));
                 if (is_anchor) {

@@ -19,7 +19,9 @@ vec<2> multilateration(vec<2> pos, std::vector<tuple<vec<2>, real_t>> anchors, s
     if (anchors.size() == 0) return pos;
     if (anchors.size() == 1) {
         vec<2> diff = pos - get<0>(anchors[0]);
-        diff *= get<1>(anchors[0]) / max(norm(diff), 1e-3);
+        real_t len = norm(diff);
+        if (len < 1e-8) return pos;
+        diff *= get<1>(anchors[0]) / len;
         return get<0>(anchors[0]) + diff;
     }
     real_t lambda = 1e-3; // normal equation parameter

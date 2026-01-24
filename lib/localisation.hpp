@@ -87,13 +87,13 @@ GEN(A, F) void monitor_algorithm(ARGS, A, F&& fun) { CODE
 //! @brief Storage list for function monitor_algorithm.
 GEN_EXPORT(A) monitor_algorithm_s = storage_list<
     tags::pos<A>,       vec<2>,
-    tags::error<A>,     double,
+    tags::error<A>,     real_t,
     tags::msg_size<A>,  size_t
 >;
 //! @brief Aggregator list for function monitor_algorithm.
 GEN_EXPORT(A) monitor_algorithm_a = storage_list<
-    tags::error<A>,     aggregator::mean<double>,
-    tags::msg_size<A>,  aggregator::mean<double>
+    tags::error<A>,     aggregator::mean<real_t>,
+    tags::msg_size<A>,  aggregator::mean<real_t>
 >;
 
 
@@ -151,7 +151,7 @@ FUN_EXPORT main_s = storage_list<
     tags::random,       std::weibull_distribution<real_t>,
     tags::is_anchor,    bool,
     tags::node_color,   color,
-    tags::node_size,    double,
+    tags::node_size,    real_t,
     tags::node_shape,   shape,
     monitor_algorithm_s<tags::dv_all_real>,
     monitor_algorithm_s<tags::dv_all_hop>,
@@ -188,7 +188,7 @@ constexpr size_t end_time = 3*bad_time;
 
 //! @brief Generic plot given X axis, Y axis and filter description Fs
 template<typename X, template<class> class Y, typename... Fs>
-using general_plot = plot::filter<Fs..., plot::plotter<coordination::main_a, X, Y>>;
+using general_plot = plot::filter<Fs..., plot::plotter<coordination::main_a, X, Y, common::type_sequence<aggregator::stats<real_t>>>>;
 
 //! @brief The simulation time after which we measure performance.
 constexpr size_t mean_time = 0;
@@ -247,7 +247,7 @@ using device_pos_d = distribution::rect_n<1, 0, 0, 500, 500>;
 //! @brief The general simulation options.
 template <bool batch>
 DECLARE_OPTIONS(list,
-    parallel<true>,      // multithreading enabled on node rounds
+    parallel<false>,     // multithreading disabled on node rounds
     synchronised<false>, // optimise for asynchronous networks
     program<coordination::main>,            // program to be run (refers to MAIN above)
     exports<coordination::main_t>,          // export type list (types used in messages)
