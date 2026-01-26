@@ -39,6 +39,10 @@ namespace tags {
     struct variance {};
     //! @brief A weibull distribution with a mean of 1 and given variance.
     struct random {};
+    //! @brief Long-range device speed to consider in the simulation.
+    struct speed {};
+    //! @brief The name of the algorithm to be displayed graphically.
+    struct display {};
 
     //! @brief Color of the current node.
     struct node_color {};
@@ -83,6 +87,10 @@ GEN(A, F) void monitor_algorithm(ARGS, A, F&& fun) { CODE
     node.storage(pos<A>{}) = std::forward<F>(fun)();
     node.storage(error<A>{}) = distance(node.position(), node.storage(pos<A>{}));
     node.storage(msg_size<A>{}) = node.cur_msg_size() - msiz_pre;
+#ifdef FCPP_GUI
+    if (node.net.storage(tags::display{}) == common::strip_namespaces(common::type_name<A>()))
+        node.storage(node_color{}) = color::hsva(120 - 2*node.storage(error<A>{}), 1, 1);
+#endif
 }
 //! @brief Storage list for function monitor_algorithm.
 GEN_EXPORT(A) monitor_algorithm_s = storage_list<
@@ -101,15 +109,22 @@ GEN_EXPORT(A) monitor_algorithm_a = storage_list<
 MAIN() {
     // import tag names in the local scope.
     using namespace tags;
-    // usage of node storage
+#ifdef FCPP_GUI
+    // node display style
     node.storage(node_size{})  = node.storage(is_anchor{}) ? 12 : 8;
     node.storage(node_shape{}) = node.storage(is_anchor{}) ? shape::cube : shape::sphere;
-    node.storage(node_color{}) = color(GREEN);
+#endif
     // 1/4 of the nodes are down between times bad_time and 2*bad_time
     if (node.uid % 4 == 0 and node.current_time() > bad_time and node.next_time() < 2*bad_time) {
-        node.storage(node_color{}) = color(RED);
+#ifdef FCPP_GUI
+        node.storage(node_shape{}) = node.storage(is_anchor{}) ? shape::tetrahedron : shape::icosahedron;
+        node.storage(node_color{}) = color(DIM_GRAY);
+#endif
         return;
     }
+    // device long-range movement
+    if (not node.storage(is_anchor{}))
+        rectangle_walk(CALL, make_vec(0,0), make_vec(500,500), node.net.storage(speed{}), 1);
     // distances with error
     field<real_t> nbr_dist = map_hood([&](real_t d){
         return d * node.storage(random{})(node.generator());
@@ -150,9 +165,11 @@ FUN_EXPORT main_s = storage_list<
     tags::debug,        std::string,
     tags::random,       std::weibull_distribution<real_t>,
     tags::is_anchor,    bool,
+#ifdef FCPP_GUI
     tags::node_color,   color,
     tags::node_size,    real_t,
     tags::node_shape,   shape,
+#endif
     monitor_algorithm_s<tags::dv_all_real>,
     monitor_algorithm_s<tags::dv_all_hop>,
     monitor_algorithm_s<tags::dv_6close_real>,
@@ -198,20 +215,26 @@ constexpr size_t def_var = 20;
 constexpr size_t def_hr = 100 - def_var;
 //! @brief The default radius simulation parameter.
 constexpr size_t def_rad = 150;
+//! @brief The default speed simulation parameter.
+constexpr size_t def_v = 0;
 //! @brief Plot of error over time.
-using error_time_plot = general_plot<plot::time, error,    half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>>;
+using error_time_plot = general_plot<plot::time, error,    half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>, speed, filter::equal<def_v>>;
 //! @brief Plot of message size over time.
-using msize_time_plot = general_plot<plot::time, msg_size, half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>>;
+using msize_time_plot = general_plot<plot::time, msg_size, half_radius, filter::equal<100-def_var>, radius, filter::equal<def_rad>, speed, filter::equal<def_v>>;
 //! @brief Plot of error over variance.
-using error_var_plot = general_plot<variance, error,    plot::time, filter::above<mean_time>, radius, filter::equal<def_rad>>;
+using error_var_plot = general_plot<variance, error,    plot::time, filter::above<mean_time>, speed, filter::equal<def_v>,      radius, filter::equal<def_rad>>;
 //! @brief Plot of message size over variance.
-using msize_var_plot = general_plot<variance, msg_size, plot::time, filter::above<mean_time>, radius, filter::equal<def_rad>>;
+using msize_var_plot = general_plot<variance, msg_size, plot::time, filter::above<mean_time>, speed, filter::equal<def_v>,      radius, filter::equal<def_rad>>;
 //! @brief Plot of error over radius.
-using error_rad_plot = general_plot<radius, error,    plot::time, filter::above<mean_time>, half_radius, filter::equal<100-def_var>>;
+using error_rad_plot = general_plot<radius, error,      plot::time, filter::above<mean_time>, speed, filter::equal<def_v>,      half_radius, filter::equal<100-def_var>>;
 //! @brief Plot of message size over radius.
-using msize_rad_plot = general_plot<radius, msg_size, plot::time, filter::above<mean_time>, half_radius, filter::equal<100-def_var>>;
+using msize_rad_plot = general_plot<radius, msg_size,   plot::time, filter::above<mean_time>, speed, filter::equal<def_v>,      half_radius, filter::equal<100-def_var>>;
+//! @brief Plot of error over speed.
+using error_speed_plot = general_plot<speed, error,     plot::time, filter::above<mean_time>, radius, filter::equal<def_rad>,   half_radius, filter::equal<100-def_var>>;
+//! @brief Plot of message size over speed.
+using msize_speed_plot = general_plot<speed, msg_size,  plot::time, filter::above<mean_time>, radius, filter::equal<def_rad>,   half_radius, filter::equal<100-def_var>>;
 //! @brief Plotter class for all batch plots.
-using batch_plot = plot::join<error_time_plot, msize_time_plot, error_var_plot, msize_var_plot, error_rad_plot, msize_rad_plot>;
+using batch_plot = plot::join<error_time_plot, msize_time_plot, error_var_plot, msize_var_plot, error_rad_plot, msize_rad_plot, error_speed_plot, msize_speed_plot>;
 
 //! @brief Plot of error over time.
 using error_plot = general_plot<plot::time, error>;
@@ -253,15 +276,20 @@ DECLARE_OPTIONS(list,
     exports<coordination::main_t>,          // export type list (types used in messages)
     node_store<coordination::main_s>,       // the contents of the node storage
     net_store<                              // the contents of the net storage
+#ifdef FCPP_GUI
+        display,        std::string,
+#endif
         variance,       real_t,
-        half_radius,    size_t,
-        radius,         size_t
+        speed,          real_t,
+        half_radius,    real_t,
+        radius,         real_t
     >,
     aggregators<coordination::main_a>,      // the tags and corresponding aggregators to be logged
     extra_info<                             // general parameters to use for plotting
         variance,       real_t,
-        half_radius,    size_t,
-        radius,         size_t
+        speed,          real_t,
+        half_radius,    real_t,
+        radius,         real_t
     >,
     plot_type<                              // the plotter object
         std::conditional_t<batch, batch_plot, gui_plot>

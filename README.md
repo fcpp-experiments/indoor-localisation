@@ -88,9 +88,9 @@ In order to execute the graphical simulation, type the following command instead
 On newer Mac M1 computers, the `-O` argument may induce compilation errors: in that case, use the `-O3` argument instead.
 If you want to specify the simulation parameters, type the following command:
 ```
-./make.sh gui run -O graphic -- <comm_radius> <variance>
+./make.sh gui run -O graphic - <comm_radius> <variance> <speed> <algorithm>
 ```
-The default value for `comm_radius` is 150 and the default value for `variance` is 0.2.
+The default value for `comm_radius` is 150m, the default value for `variance` is 20%, the default value for `speed` is 0m/s, and the default value for `algorithm` is `mlcoop_real`. Node colors will be tuned according to the error of the chosen `algorithm`.
 
 Running the above commands, you should see output about building the executables then the graphical simulation should pop up while the console will show the most recent `stdout` and `stderr` outputs of the application, together with resource usage statistics (both on RAM and CPU).  During the execution, log files will be generated in the `output/` repository sub-folder. When launching a batch of multiple simulations (`batch` target), individual simulation results will be logged in the `output/raw/` subdirectory, with the overall resume in the `output/` directory.
 
