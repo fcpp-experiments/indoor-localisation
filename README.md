@@ -86,6 +86,7 @@ In order to execute the graphical simulation, type the following command instead
 ./make.sh gui run -O graphic
 ```
 On newer Mac M1 computers, the `-O` argument may induce compilation errors: in that case, use the `-O3` argument instead.
+If you want to get profiling information, add a `-DPROFILER` option.
 If you want to specify the simulation parameters, type the following command:
 ```
 ./make.sh gui run -O graphic - <comm_radius> <variance> <speed> <algorithm>

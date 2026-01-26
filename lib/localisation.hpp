@@ -83,6 +83,7 @@ namespace tags {
 //! @brief Runs an algorithm and saves monitoring data.
 GEN(A, F) void monitor_algorithm(ARGS, A, F&& fun) { CODE
     using namespace tags;
+    PROFILE_COUNT("round/main/" + common::strip_namespaces(common::type_name<A>()));
     size_t msiz_pre = node.cur_msg_size();
     node.storage(pos<A>{}) = std::forward<F>(fun)();
     node.storage(error<A>{}) = distance(node.position(), node.storage(pos<A>{}));
