@@ -14,7 +14,7 @@ namespace fcpp {
 namespace coordination {
 
 //! @brief Weighted nonlinear least-squares 2D multilateration with the Levenberg–Marquardt method, given an approximated position and a base weight for anchors.
-vec<2> multilateration(vec<2> pos, std::vector<tuple<vec<2>, real_t>> anchors, std::vector<real_t> weights, real_t base_weight, real_t& weight) {
+vec<2> multilateration(vec<2> pos, std::vector<tuple<vec<2>, real_t>> const& anchors, std::vector<real_t> const& weights, real_t base_weight, real_t& weight) {
     // Handle special cases
     if (anchors.size() == 0) return pos;
     if (anchors.size() == 1) {

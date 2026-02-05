@@ -14,23 +14,26 @@ namespace fcpp {
 //! @brief Namespace containing the libraries of coordination routines.
 namespace coordination {
 
+//! @brief Gradient descent minimising linearised least squares (equivalent to elastic forces towards measured distances).
+vec<2> gradient_descent(vec<2> pos, std::vector<tuple<vec<2>, real_t>> const& anchors, real_t alpha = 0.1) {
+    for (auto const& t : anchors) {
+        vec<2> pos_stim = get<0>(t);
+        real_t sensed_dist = get<1>(t);
+        real_t pos_dist = distance(pos, pos_stim);
+        real_t delta = sensed_dist - pos_dist;
+        vec<2> diff = pos - pos_stim;
+        real_t length = norm(diff);
+        if (length > 1e-6) pos += (alpha * delta / length) * diff;
+    }
+    return pos;
+}
+
 //! @brief Non-bayesian cooperative localization.
 FUN vec<2> nb_coop(ARGS, vec<2> init, bool is_anchor, field<real_t> nbr_dist){ CODE
     return nbr(CALL, init, [&](field<vec<2>> nbr_pos) {
-        auto nbr_pos_dist = list_hood(CALL, std::vector<tuple<vec<2>, real_t>>{}, make_tuple(nbr_pos, nbr_dist), tags::nothing{});
+        auto pos_dist_vec = list_hood(CALL, std::vector<tuple<vec<2>, real_t>>{}, make_tuple(nbr_pos, nbr_dist), tags::nothing{});
         if (is_anchor) return node.position();
-        real_t alpha = 0.1;
-        vec<2> pos = self(CALL, nbr_pos);
-        for (auto const& t : nbr_pos_dist) {
-            vec<2> pos_stim = get<0>(t);
-            real_t sensed_dist = get<1>(t);
-            real_t pos_dist = distance(pos, pos_stim);
-            real_t delta = sensed_dist - pos_dist;
-            vec<2> diff = pos - pos_stim;
-            real_t length = norm(diff);
-            if (length > 1e-6) pos += (alpha * delta / length) * diff;
-        }
-        return pos;
+        return gradient_descent(self(CALL, nbr_pos), pos_dist_vec);
     });
 }
 //! @brief Export list for coop.
