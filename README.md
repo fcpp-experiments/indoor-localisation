@@ -15,6 +15,11 @@ All commands below are assumed to be issued from the cloned git repository folde
 
 ## Setup
 
+To clone the repo from Github use the command:
+```
+git clone git@github.com:fcpp-experiments/indoor-localisation.git
+```
+
 The next sections contain the setup instructions for the various supported OSs. Jump to the section dedicated to your system of choice and ignore the others.
 
 ### Windows
@@ -79,7 +84,9 @@ Alternatively, you can build the container yourself with the following command:
 ```
 docker build -t ghcr.io/fcpp-experiments/indoor-localization:1.0.0 .
 ```
-Once you have the Docker container locally available, in **Linux** you should enable access to xhost from docker (for GUI):
+Once you have the Docker container locally available, move to the root of the repo directory for running the container.
+
+In **Linux** you should enable access to xhost from docker (for GUI):
 ```
 xhost +local:docker
 ```
