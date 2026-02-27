@@ -68,6 +68,34 @@ xcode-select --install
 brew install cmake asymptote
 ```
 
+
+### Docker container
+
+Download Docker from [https://www.docker.com](https://www.docker.com), then you can download the Docker container from GitHub by typing the following command in a terminal:
+```
+docker pull ghcr.io/fcpp-experiments/indoor-localization:1.0.0
+```
+Alternatively, you can build the container yourself with the following command:
+```
+docker build -t ghcr.io/fcpp-experiments/indoor-localization:1.0.0 .
+```
+Once you have the Docker container locally available, enable access to xhost from docker (for GUI):
+```
+xhost +local:docker
+```
+and then type the following command to enter the container:
+```
+docker run -it --rm --volume $PWD:/indoor-localization \
+--workdir /indoor-localization -e DISPLAY=:0 \
+-v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint /bin/bash \
+ghcr.io/fcpp-experiments/indoor-localization:1.0.0
+```
+and the following command to exit it:
+```
+exit
+```
+In order to properly link the executables in Docker, you may need to add the `-pthread` option (substitute `-O` for `-O -pthread` below).
+
 ### Virtual Machines
 
 If you use a VM with a graphical interface, refer to the section for the operating system installed on it.
