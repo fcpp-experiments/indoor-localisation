@@ -1,7 +1,7 @@
 FROM ubuntu:22.04 AS build
 
 RUN apt-get -qq update &&\
-    apt-get -qq -y install cmake ninja-build gcc g++ &&\
+    apt-get -qq -y install cmake ninja-build gcc g++ asymptote &&\
     apt-get -qq clean all
 
 RUN apt-get -qq -y install git less procps htop &&\
