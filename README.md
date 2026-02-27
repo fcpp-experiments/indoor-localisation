@@ -79,7 +79,7 @@ Alternatively, you can build the container yourself with the following command:
 ```
 docker build -t ghcr.io/fcpp-experiments/indoor-localization:1.0.0 .
 ```
-Once you have the Docker container locally available, enable access to xhost from docker (for GUI):
+Once you have the Docker container locally available, in **Linux** you should enable access to xhost from docker (for GUI):
 ```
 xhost +local:docker
 ```
@@ -90,7 +90,17 @@ docker run -it --rm --volume $PWD:/indoor-localization \
 -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint /bin/bash \
 ghcr.io/fcpp-experiments/indoor-localization:1.0.0
 ```
-and the following command to exit it:
+In this way, in Linux you will be able to run both the `batch` and `graphic` versions of the system.
+
+On **Mac** you can use the same command (possibly omitting the parameters related with X) but you will only be able to run the `batch` version of the system.
+
+On **Windows** (MSYS2 shell) you should give a slightly different command to run the container:
+```
+MSYS2_ARG_CONV_EXCL='*' docker run -it --rm   -v "$(pwd -W):/indoor-localization"   -w /indoor-localization   --entrypoint /bin/bash   ghcr.io/fcpp-experiments/indoor-localization:1.0.0
+```
+to deal with path conversions between MSYS2 and the container. As on the Mac, you will only be able to run the `batch` version of the system.
+
+Finally the following command exits the container:
 ```
 exit
 ```
